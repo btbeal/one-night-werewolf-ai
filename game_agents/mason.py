@@ -1,0 +1,74 @@
+from agents import Agent, Runner
+from dotenv import load_dotenv
+import os
+from game_context.game_context import GameContext
+from game_context.roles import Role
+from .common_tools import NightActionResult
+
+load_dotenv()
+
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+
+
+def see_mason_allies(game_context: GameContext, mason_player_id: int) -> NightActionResult:
+    """
+    Mason sees other masons
+    
+    Args:
+        game_context: Current game state
+        mason_player_id: ID of the mason
+    
+    Returns:
+        NightActionResult with other mason information
+    """
+    all_masons = game_context.get_players_with_role(Role.MASON)
+    
+    other_masons = [mason_id for mason_id in all_masons if mason_id != mason_player_id]
+    
+    if not other_masons:
+        return NightActionResult(
+            True,
+            "You looked for other masons but found none. You are the only mason!",
+            {"other_masons": [], "is_only_mason": True}
+        )
+    
+    mason_names = []
+    for mason_id in other_masons:
+        player = game_context.get_player(mason_id)
+        if player:
+            mason_names.append(player.player_name)
+    
+    mason_list = ", ".join(mason_names)
+    
+    return NightActionResult(
+        True,
+        f"You looked for other masons and found: {mason_list}",
+        {
+            "other_masons": other_masons,
+            "mason_names": mason_names,
+            "is_only_mason": False
+        }
+    )
+
+
+mason = Agent(
+    name="mason",
+    instructions="""
+    You are playing a game of One Night Werewolf and have been assigned the role of a Mason!
+
+    During the night, you looked for other Masons. Masons are on the villager team and know each other.
+
+    Your strategy should be to:
+    1. Coordinate with other Masons if they exist
+    2. Use your confirmed villager allies to build trust
+    3. Help identify werewolves as a trusted group
+    4. If you're the only Mason, use that information strategically
+
+    You are on the villager team and want to eliminate werewolves.
+
+    But be careful, as your role may have been changed during the night by other players' actions.
+
+    It is now morning -- time to work with your Mason allies!
+    """,
+    model="gpt-4o-mini",
+)
