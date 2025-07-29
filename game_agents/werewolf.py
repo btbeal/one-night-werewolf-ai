@@ -12,7 +12,9 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 def see_werewolf_allies(game_context: GameContext, werewolf_player_id: int) -> NightActionResult:
     """
-    Werewolf sees other werewolves
+    Nightime action: since you are the werewolf, once at the beginning of the game (during the night phase),
+    you can see who the other werewolves are (your teammates). If you are the only werewolf, you are the lone werewolf but you 
+    can look at one card in the middle! If this is a werewolf, you may look at another card in the middle. 
     
     Args:
         game_context: Current game state
@@ -21,10 +23,7 @@ def see_werewolf_allies(game_context: GameContext, werewolf_player_id: int) -> N
     Returns:
         NightActionResult with other werewolf information
     """
-    # Find all players with werewolf role
     all_werewolves = game_context.get_players_with_role(Role.WEREWOLF)
-    
-    # Remove self from the list
     other_werewolves = [ww_id for ww_id in all_werewolves if ww_id != werewolf_player_id]
     
     if not other_werewolves:
@@ -34,7 +33,6 @@ def see_werewolf_allies(game_context: GameContext, werewolf_player_id: int) -> N
             {"other_werewolves": [], "is_lone_werewolf": True}
         )
     
-    # Get names of other werewolves
     werewolf_names = []
     for ww_id in other_werewolves:
         player = game_context.get_player(ww_id)

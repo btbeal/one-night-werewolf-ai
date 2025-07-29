@@ -26,4 +26,5 @@ tanner = Agent(
     It is now morning -- time to act just suspicious enough!
     """,
     model="gpt-4o-mini",
-) 
+)
+

@@ -13,6 +13,7 @@ class PlayerState(BaseModel):
     """State of an individual player"""
     player_id: int
     player_name: str
+    initial_role: str
     character_being_claimed: Optional[str] = None
     ready_to_vote: bool = False
     is_ai: bool = False

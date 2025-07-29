@@ -1,0 +1,13 @@
+{
+    "number_human_players": 2,
+    "available_roles": [
+        "werewolf",
+        "werewolf",
+        "villager",
+        "seer",
+        "robber",
+        "troublemaker",
+        "minion"
+    ],
+    "max_rounds": 5
+}
