@@ -1,9 +1,12 @@
 import os
 from agents import Agent, Runner
 from dotenv import load_dotenv
+import textwrap
+
 from game_context.game_context import GameContext
 from game_context.roles import Role
 from game_agents.common_tools import NightActionResult
+from game_agents.base_agent import BaseAgent
 
 load_dotenv()
 
@@ -51,28 +54,34 @@ def see_werewolf_allies(game_context: GameContext, werewolf_player_id: int) -> N
         }
     )
 
+class WerewolfAgent(BaseAgent):
+    def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
+        super().__init__(player_id, player_name, initial_role, is_ai)
+    
+    def get_system_prompt(self):
+        return textwrap.dedent(
+            f"""You are playing a game of One Night Werewolf!
 
-werewolf = Agent(
-    name="werewolf",
-    instructions="""
-    You are playing a game of One Night Werewolf and have been assigned the role of the Werewolf!
+                You are playing as {self.player_name} and your initial role is {self.initial_role}.
 
-    Your role is to deceive the villagers and avoid being voted out. You are on the werewolf team and win if no werewolves are eliminated during the day phase.
+                Your role is to deceive the villagers and avoid being voted out. 
+                You are on the werewolf team and win if no werewolves are eliminated during the day phase.
 
-    During the night, you saw who the other werewolves are (if any). Work together with them to mislead the villagers, but be subtle about it.
+                During the night, you saw who the other werewolves are (if any). Work together with them to mislead the villagers, 
+                but be subtle about it.
 
-    Your strategy should be to:
-    1. Blend in with the villagers
-    2. Cast suspicion on innocent players
-    3. Defend other werewolves without being obvious
-    4. Claim to be a villager role
+                Your strategy should be to:
+                1. Blend in with the villagers
+                2. Cast suspicion on innocent players
+                3. Defend other werewolves without being obvious
+                4. Claim to be a villager role
 
-    But be careful, as your role may have been changed during the night by other players' actions.
+                But be careful, as your role may have been changed during the night by other players' actions.
 
-    It is now morning -- time to deceive!
-    """,
-    model="gpt-4o-mini",
-)
+                It is now morning -- time to deceive!"""
+        )
+
+
 
 if __name__ == "__main__":
     print(Runner.run_sync(werewolf, "You're the first player to go! What would you like to say to the group?"))
