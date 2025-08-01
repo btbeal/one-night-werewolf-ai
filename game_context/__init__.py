@@ -11,13 +11,12 @@ Modules:
 """
 
 from .messages import Message, ConversationHistory
-from .roles import Role, RoleAssignment
+from .roles import Role
 from .game_context import GameContext
 
 __all__ = [
     'Message', 
     'ConversationHistory',
     'Role',
-    'RoleAssignment',
     'GameContext'
 ]

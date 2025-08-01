@@ -34,6 +34,9 @@ def create_agents_from_config(game_config: dict) -> List[BaseAgent]:
 
 
 def setup_game_context(game_config: dict) -> GameContext:
+    if game_config["number_human_players"] > len(game_config["available_roles"]) - 3:
+        raise ValueError("Number of players must be less than or equal to the number of available roles minus 3 (for the center cards)")
+    
     agents = create_agents_from_config(game_config)
     game_context = GameContext()
 

@@ -1,8 +1,9 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Any, Type
+from typing import List, Dict, Optional, Any, Type, TYPE_CHECKING
 from enum import Enum
-from game_agents.base_agent import BaseAgent
-from game_agents.agent_registry import AGENT_REGISTRY
+
+if TYPE_CHECKING:
+    from game_agents.base_agent import BaseAgent
 
 
 class Role(str, Enum):
@@ -25,7 +26,10 @@ class Role(str, Enum):
     TANNER = "tanner"
 
     def get_agent_class(self) -> Type['BaseAgent']:
+        from game_agents.agent_registry import AGENT_REGISTRY
         try:
             return AGENT_REGISTRY[self.value]
         except KeyError:
             raise ValueError(f"No agent class registered for role: {self.value}")
+
+

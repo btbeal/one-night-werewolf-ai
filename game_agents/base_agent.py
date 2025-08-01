@@ -10,24 +10,59 @@ class ONWAgentResponse(BaseModel):
     """Response from the agent"""
     public_response: str
     private_thoughts: str
+    tool_calls: list[dict] = []
+    raw_response: str = ""
 
-def inquire_about_another_player(player_name: str, question: str):
-    # Need to implement logic that can grab the player agent and ask them a question
-    # This will come from the game controller
-    return f"Question sent to {player_name}: {question}"
+def inquire_about_another_player(player_name: str, question: str, game_context: GameContext, questioning_player_name: str):
+    """
+    Send a question to another player and get their response
+    
+    Args:
+        player_name: Name of the player to question
+        question: The question to ask
+        game_context: Current game context containing all players
+        questioning_player_name: Name of the player asking the question
+        
+    Returns:
+        The response from the questioned player
+    """
+    target_player = game_context.get_player_by_name(player_name)
+    
+    if not target_player:
+        return f"Player '{player_name}' not found in the game."
+    
+    try:
+        response = target_player.act(
+            prompt=question,
+            prompt_is_another_player_question=True,
+            questioning_player_name=questioning_player_name,
+            game_state=game_context
+        )
+        return f"{player_name} responds: {response.public_response}"
+    except Exception as e:
+        return f"Error getting response from {player_name}: {str(e)}"
 
 common_tools = [
     {
         "type": "function",
-        "name": "inquire_about_another_player",
-        "description": "Sometimes a player may find information about another player slightly suspicious, or they may want to know more about another player. This tool allows you to ask a question of another player.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "player_name": {"type": "string", "description": "The name of the player you want to inquire about (this information is available via the conversation history you have)"},
-                "question": {"type": "string", "description": "The question you want to ask the player"},
-            },
-            "required": ["player_name", "question"]
+        "function": {
+            "name": "inquire_about_another_player",
+            "description": "Ask a direct question to another player in the game. Use this when you want to gather information, challenge someone's claims, or investigate suspicious behavior. The target player will respond based on their role and strategy - they may lie, tell the truth, or be evasive. This is a key tool for social deduction and information gathering.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "player_name": {
+                        "type": "string", 
+                        "description": "The exact name of the player you want to question. Make sure to use the exact name as it appears in the conversation history. Case sensitive."
+                    },
+                    "question": {
+                        "type": "string", 
+                        "description": "The specific question you want to ask. Be clear and direct. Examples: 'What role did you start with?', 'Did you see my card?', 'Why do you think Alice is suspicious?', 'Who do you plan to vote for?'"
+                    },
+                },
+                "required": ["player_name", "question"],
+                "additionalProperties": False
+            }
         }
     }
 ]
@@ -37,6 +72,7 @@ class BaseAgent:
         self.model = model
         self.player_id = player_id
         self.player_name = player_name
+        self.current_role = initial_role
         self.initial_role = initial_role
         self.personal_knowledge = []
         self.is_ai = is_ai
@@ -54,7 +90,7 @@ class BaseAgent:
         Act on the given prompt.
         """
         conversation_history = game_state.conversation
-        return self._invoke_model(conversation_history, prompt, prompt_is_another_player_question, questioning_player_name)
+        return self._invoke_model(conversation_history, prompt, prompt_is_another_player_question, questioning_player_name, game_state)
 
     def _get_system_prompt(self):
         raise NotImplementedError("Subclasses must implement this method")
@@ -106,7 +142,7 @@ class BaseAgent:
                 PUBLIC_RESPONSE: [What you want to say out loud to the group]"""
             )
         
-    def _invoke_model(self, conversation_history: ConversationHistory, prompt: str, prompt_is_another_player_question: bool = False, questioning_player_name: str = "") -> ONWAgentResponse:
+    def _invoke_model(self, conversation_history: ConversationHistory, prompt: str, prompt_is_another_player_question: bool = False, questioning_player_name: str = "", game_context: GameContext = None) -> ONWAgentResponse:
         system_prompt = self._get_system_prompt()
         user_prompt = self._get_prompt(conversation_history, prompt, prompt_is_another_player_question, questioning_player_name)
         
@@ -130,7 +166,7 @@ class BaseAgent:
                 name = tool_call.function.name
                 args = json.loads(tool_call.function.arguments)
                 
-                result = self.call_tool(name, args)
+                result = self.call_tool(name, args, game_context)
                 tool_calls_made.append({
                     "name": name,
                     "args": args,
@@ -179,9 +215,16 @@ class BaseAgent:
             return f"Error parsing response: {str(e)}", raw_response.strip()
 
 
-    def call_tool(self, name: str, args: dict):
+    def call_tool(self, name: str, args: dict, game_context: GameContext = None):
         if name == "inquire_about_another_player":
-            return f"Question sent to {args['player_name']}: {args['question']}"
+            if not game_context:
+                return "Error: Game context required for this tool"
+            return inquire_about_another_player(
+                player_name=args['player_name'],
+                question=args['question'],
+                game_context=game_context,
+                questioning_player_name=self.player_name
+            )
         else:
             return f"Unknown tool: {name}"
     

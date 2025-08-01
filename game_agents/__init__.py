@@ -24,7 +24,7 @@ Roles without night actions: villager, hunter, tanner
 
 # Import our BaseAgent system
 from .base_agent import BaseAgent, ONWAgentResponse
-from .agent_registry import ROLE_TO_AGENT_CLASS
+from .agent_registry import AGENT_REGISTRY
 
 # Import specific agent classes
 from .werewolf import WerewolfAgent
@@ -33,7 +33,7 @@ from .villager import VillagerAgent
 __all__ = [
     'BaseAgent',
     'ONWAgentResponse',
-    'ROLE_TO_AGENT_CLASS',
+    'AGENT_REGISTRY',
     'WerewolfAgent',
     'VillagerAgent'
 ] 

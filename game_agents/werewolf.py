@@ -3,7 +3,7 @@ from game_context.game_context import GameContext
 from game_context.roles import Role
 from game_agents.common_tools import NightActionResult
 from game_agents.base_agent import BaseAgent
-from agent_registry import register_agent
+from .agent_registry import register_agent
 
 
 def see_werewolf_allies(game_context: GameContext, werewolf_player_id: int) -> NightActionResult:
