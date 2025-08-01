@@ -22,43 +22,18 @@ Each agent file that has night actions also contains the corresponding tool func
 Roles without night actions: villager, hunter, tanner
 """
 
-# Import Agent and Runner from the external openai-agents package
-try:
-    from agents import Agent, Runner
-except ImportError as e:
-    # Provide a helpful error message if openai-agents is not installed
-    raise ImportError(
-        "Could not import Agent and Runner from openai-agents package. "
-        "Make sure 'openai-agents' is installed with: pip install openai-agents"
-    ) from e
+# Import our BaseAgent system
+from .base_agent import BaseAgent, ONWAgentResponse
+from .agent_registry import ROLE_TO_AGENT_CLASS
 
-# Import all agents for easy access
-from .seer import seer
-from .werewolf import werewolf
-from .villager import villager
-from .robber import robber
-from .troublemaker import troublemaker
-from .tanner import tanner
-from .drunk import drunk
-from .insomniac import insomniac
-from .minion import minion
-from .mason import mason
-from .hunter import hunter
+# Import specific agent classes
+from .werewolf import WerewolfAgent
+from .villager import VillagerAgent
 
 __all__ = [
-    # External classes from openai-agents package
-    'Agent',
-    'Runner',
-    # Local agent instances
-    'seer',
-    'werewolf', 
-    'villager',
-    'robber',
-    'troublemaker', 
-    'tanner',
-    'drunk',
-    'insomniac',
-    'minion',
-    'mason',
-    'hunter'
+    'BaseAgent',
+    'ONWAgentResponse',
+    'ROLE_TO_AGENT_CLASS',
+    'WerewolfAgent',
+    'VillagerAgent'
 ] 

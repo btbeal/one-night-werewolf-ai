@@ -3,14 +3,13 @@ import os
 import json
 import textwrap
 from pydantic import BaseModel
+from game_context.game_context import GameContext
 from game_context.messages import ConversationHistory
 
 class ONWAgentResponse(BaseModel):
     """Response from the agent"""
-    public_response: str  # What the agent says to the group
-    private_thoughts: str  # What the agent is thinking privately
-    tool_calls: list[dict] = []  # Any tool calls made
-    raw_response: str = ""  # The full raw response from the model
+    public_response: str
+    private_thoughts: str
 
 def inquire_about_another_player(player_name: str, question: str):
     # Need to implement logic that can grab the player agent and ask them a question
@@ -44,10 +43,23 @@ class BaseAgent:
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.tools = common_tools + tools
     
-    def get_system_prompt(self):
+    def act(
+            self,
+            prompt: str,
+            prompt_is_another_player_question: bool = False,
+            questioning_player_name: str = "",
+            game_state: GameContext = None
+    ) -> ONWAgentResponse:
+        """
+        Act on the given prompt.
+        """
+        conversation_history = game_state.conversation
+        return self._invoke_model(conversation_history, prompt, prompt_is_another_player_question, questioning_player_name)
+
+    def _get_system_prompt(self):
         raise NotImplementedError("Subclasses must implement this method")
 
-    def get_prompt(self, conversation_history: ConversationHistory, prompt: str, prompt_is_another_player_question: bool = False, questioning_player_name: str = ""):
+    def _get_prompt(self, conversation_history: ConversationHistory, prompt: str, prompt_is_another_player_question: bool = False, questioning_player_name: str = ""):
         if conversation_history.messages:
             conversation_history_text = f"Here is the conversation history you've been participating in:\n\n{conversation_history.get_public_conversation_history()}"
         else:
@@ -94,25 +106,25 @@ class BaseAgent:
                 PUBLIC_RESPONSE: [What you want to say out loud to the group]"""
             )
         
-    def invoke_model(self, conversation_history: ConversationHistory, prompt: str, prompt_is_another_player_question: bool = False, questioning_player_name: str = "") -> ONWAgentResponse:
-        system_prompt = self.get_system_prompt()
-        user_prompt = self.get_prompt(conversation_history, prompt, prompt_is_another_player_question, questioning_player_name)
+    def _invoke_model(self, conversation_history: ConversationHistory, prompt: str, prompt_is_another_player_question: bool = False, questioning_player_name: str = "") -> ONWAgentResponse:
+        system_prompt = self._get_system_prompt()
+        user_prompt = self._get_prompt(conversation_history, prompt, prompt_is_another_player_question, questioning_player_name)
         
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ]
         
-        response = self.client.chat.completions.create(
+        response = self.client.chat.completions.parse(
             model=self.model,
             messages=messages,
-            tools=self.tools if self.tools else None
+            tools=self.tools if self.tools else None,
+            response_format=ONWAgentResponse
         )
 
         raw_response = response.choices[0].message.content
         tool_calls_made = []
 
-        # Handle tool calls if any
         if response.choices[0].message.tool_calls:
             for tool_call in response.choices[0].message.tool_calls:
                 name = tool_call.function.name
@@ -131,79 +143,41 @@ class BaseAgent:
                     "content": str(result)
                 })
         
-        # Parse the structured response
+
         private_thoughts, public_response = self._parse_structured_response(raw_response)
         
-        # Create the agent response
-        agent_response = ONWAgentResponse(
+        agent_response = ONWAgentResponse(  
+            public_response=public_response,
+            private_thoughts=private_thoughts,
+            tool_calls=tool_calls_made,
+            raw_response=raw_response
+        )
+
+        conversation_history.add_agent_response(
+            player_id=self.player_id,
+            player_name=self.player_name,
             public_response=public_response,
             private_thoughts=private_thoughts,
             tool_calls=tool_calls_made,
             raw_response=raw_response
         )
         
-        # Add the full agent response to conversation history
-        if public_response.strip() or private_thoughts.strip() or tool_calls_made:  # Add if there's any meaningful content
-            conversation_history.add_agent_response(
-                player_id=self.player_id,
-                player_name=self.player_name,
-                public_response=public_response,
-                private_thoughts=private_thoughts,
-                tool_calls=tool_calls_made,
-                raw_response=raw_response
-            )
-        
         return agent_response
 
     def _parse_structured_response(self, raw_response: str) -> tuple[str, str]:
-        """Parse the structured response to extract private thoughts and public response"""
-        if not raw_response:
-            return "", ""
-        
-        # Default values
-        private_thoughts = ""
-        public_response = ""
-        
-        # Split by lines and look for the markers
-        lines = raw_response.split('\n')
-        current_section = None
-        current_content = []
-        
-        for line in lines:
-            line = line.strip()
+        try:
+            parsed = json.loads(raw_response)
+
+            private_thoughts = parsed.get("private_thoughts", "No private thoughts provided")
+            public_response = parsed.get("public_response", "No public response provided")
             
-            if line.startswith('PRIVATE_THOUGHTS:'):
-                # Save previous section if any
-                if current_section == 'public':
-                    public_response = '\n'.join(current_content).strip()
-                
-                current_section = 'private'
-                current_content = [line.replace('PRIVATE_THOUGHTS:', '').strip()]
-                
-            elif line.startswith('PUBLIC_RESPONSE:'):
-                # Save previous section if any
-                if current_section == 'private':
-                    private_thoughts = '\n'.join(current_content).strip()
-                
-                current_section = 'public'
-                current_content = [line.replace('PUBLIC_RESPONSE:', '').strip()]
-                
-            elif current_section:
-                # Continue adding to current section
-                current_content.append(line)
-        
-        # Don't forget the last section
-        if current_section == 'private':
-            private_thoughts = '\n'.join(current_content).strip()
-        elif current_section == 'public':
-            public_response = '\n'.join(current_content).strip()
-        
-        # Fallback: if no structured format found, treat entire response as public
-        if not private_thoughts and not public_response:
-            public_response = raw_response.strip()
-            private_thoughts = "No private thoughts provided"
-        
-        return private_thoughts, public_response
+            return private_thoughts, public_response
+            
+        except json.JSONDecodeError as e:
+            return f"Error parsing JSON response: {str(e)}", raw_response.strip()
+        except Exception as e:
+            return f"Error parsing response: {str(e)}", raw_response.strip()
+
 
     def call_tool(self, name: str, args: dict):
         if name == "inquire_about_another_player":

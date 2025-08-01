@@ -1,16 +1,9 @@
-import os
-from agents import Agent, Runner
-from dotenv import load_dotenv
 import textwrap
-
 from game_context.game_context import GameContext
 from game_context.roles import Role
 from game_agents.common_tools import NightActionResult
 from game_agents.base_agent import BaseAgent
-
-load_dotenv()
-
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+from agent_registry import register_agent
 
 
 def see_werewolf_allies(game_context: GameContext, werewolf_player_id: int) -> NightActionResult:
@@ -54,11 +47,12 @@ def see_werewolf_allies(game_context: GameContext, werewolf_player_id: int) -> N
         }
     )
 
+@register_agent(Role.WEREWOLF)
 class WerewolfAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
         super().__init__(player_id, player_name, initial_role, is_ai)
     
-    def get_system_prompt(self):
+    def _get_system_prompt(self):
         return textwrap.dedent(
             f"""You are playing a game of One Night Werewolf!
 
@@ -80,9 +74,3 @@ class WerewolfAgent(BaseAgent):
 
                 It is now morning -- time to deceive!"""
         )
-
-
-
-if __name__ == "__main__":
-    print(Runner.run_sync(werewolf, "You're the first player to go! What would you like to say to the group?"))
-

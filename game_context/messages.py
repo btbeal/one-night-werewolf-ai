@@ -47,51 +47,13 @@ class ConversationHistory(BaseModel):
         self.next_message_id += 1
         return new_message
     
-    def add_simple_message(
-        self, 
-        player_id: int, 
-        player_name: str,
-        message: str, 
-    ) -> Message:
-        """Add a simple message (for human players or system messages)"""
-        return self.add_agent_response(
-            player_id=player_id,
-            player_name=player_name,
-            public_response=message,
-            private_thoughts="",
-            tool_calls=[],
-            raw_response=message
-        )
-
-    def get_plain_text_conversation_history(self, include_private_thoughts: bool = False, include_tool_calls: bool = False) -> str:
-        """Get conversation history as plain text, with optional private thoughts and tool calls"""
-        if not self.messages:
-            return "No conversation history yet."
-            
-        formatted = []
-        for message in self.messages:
-            # Always include public response
-            if message.public_response.strip():
-                formatted.append(f"{message.player_name}: {message.public_response}")
-            
-            # Optionally include private thoughts (for debugging/analysis)
-            if include_private_thoughts and message.private_thoughts.strip():
-                formatted.append(f"[{message.player_name}'s private thoughts: {message.private_thoughts}]")
-            
-            # Optionally include tool calls (for debugging/analysis)
-            if include_tool_calls and message.tool_calls:
-                for tool_call in message.tool_calls:
-                    formatted.append(f"[{message.player_name} used tool {tool_call['name']}: {tool_call.get('result', 'No result')}]")
-        
-        return "\n".join(formatted)
-    
     def get_public_conversation_history(self) -> str:
         """Get only the public conversation history (what players actually said)"""
-        return self.get_plain_text_conversation_history(include_private_thoughts=False, include_tool_calls=False)
+        return self._get_plain_text_conversation_history(include_private_thoughts=False, include_tool_calls=False)
     
     def get_full_conversation_history(self) -> str:
         """Get the full conversation history including private thoughts and tool calls (for debugging)"""
-        return self.get_plain_text_conversation_history(include_private_thoughts=True, include_tool_calls=True)
+        return self._get_plain_text_conversation_history(include_private_thoughts=True, include_tool_calls=True)
     
     def get_player_private_thoughts(self, player_id: int) -> List[str]:
         """Get all private thoughts for a specific player"""
@@ -100,3 +62,22 @@ class ConversationHistory(BaseModel):
             for message in self.messages 
             if message.player_id == player_id and message.private_thoughts.strip()
         ]
+    
+    def _get_plain_text_conversation_history(self, include_private_thoughts: bool = False, include_tool_calls: bool = False) -> str:
+        """Get conversation history as plain text, with optional private thoughts and tool calls"""
+        if not self.messages:
+            return "No conversation history yet."
+            
+        formatted = []
+        for message in self.messages:
+            if message.public_response.strip():
+                formatted.append(f"{message.player_name}: {message.public_response}")
+            
+            if include_private_thoughts and message.private_thoughts.strip():
+                formatted.append(f"[{message.player_name}'s private thoughts: {message.private_thoughts}]")
+            
+            if include_tool_calls and message.tool_calls:
+                for tool_call in message.tool_calls:
+                    formatted.append(f"[{message.player_name} used tool {tool_call['name']}: {tool_call.get('result', 'No result')}]")
+        
+        return "\n".join(formatted)
