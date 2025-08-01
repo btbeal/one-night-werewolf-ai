@@ -22,18 +22,12 @@ Each agent file that has night actions also contains the corresponding tool func
 Roles without night actions: villager, hunter, tanner
 """
 
-# Import our BaseAgent system
 from .base_agent import BaseAgent, ONWAgentResponse
 from .agent_registry import AGENT_REGISTRY
-
-# Import specific agent classes
-from .werewolf import WerewolfAgent
-from .villager import VillagerAgent
+from . import villager, werewolf, seer, robber, troublemaker, drunk, hunter, insomniac, mason, minion, tanner
 
 __all__ = [
     'BaseAgent',
     'ONWAgentResponse',
     'AGENT_REGISTRY',
-    'WerewolfAgent',
-    'VillagerAgent'
 ] 
