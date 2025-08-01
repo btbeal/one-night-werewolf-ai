@@ -56,7 +56,7 @@ class WerewolfAgent(BaseAgent):
         return textwrap.dedent(
             f"""You are playing a game of One Night Werewolf!
 
-                You are playing as {self.player_name} and your initial role is {self.initial_role}.
+                You are playing as {self.player_name} and your initial role is Werewolf.
 
                 Your role is to deceive the villagers and avoid being voted out. 
                 You are on the werewolf team and win if no werewolves are eliminated during the day phase.

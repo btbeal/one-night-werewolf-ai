@@ -1,16 +1,33 @@
-from agents import Agent, Runner
-from dotenv import load_dotenv
-import os
 from game_context.game_context import GameContext
 from game_context.roles import Role
-from .common_tools import NightActionResult, validate_player_exists
+from game_agents.agent_registry import register_agent
+from game_agents.base_agent import BaseAgent
+from game_agents.common_tools import NightActionResult, validate_player_exists
+import textwrap
 
-load_dotenv()
+@register_agent(Role.ROBBER)
+class RobberAgent(BaseAgent):
+    def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
+        super().__init__(player_id, player_name, initial_role, is_ai)
 
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+    def _get_system_prompt(self):
+        return textwrap.dedent(
+            f"""
+            You are playing a game of One Night Werewolf and have been assigned the role of the Robber! Your name is {self.player_name}.
 
+            During the night, you swapped your card with another player and looked at your new role. You now know what role you have become and what role the other player now has.
 
-# ROBBER NIGHT ACTION TOOLS
+            Your strategy depends on your new role:
+            - If you're now a villager role: Help find the werewolves
+            - If you're now a werewolf: Try to blend in and avoid detection
+            - Share information about the swap strategically
+
+            Remember: The player you swapped with now has your original Robber card, but they don't know about the swap.
+
+            It is now morning -- use your knowledge wisely!
+            """
+        )
+
 def rob_player_card(game_context: GameContext, robber_player_id: int, target_player_id: int) -> NightActionResult:
     """
     Robber swaps their card with another player and sees their new role
@@ -32,19 +49,16 @@ def rob_player_card(game_context: GameContext, robber_player_id: int, target_pla
     
     target_player = game_context.get_player(target_player_id)
     
-    # Get the roles before swapping
     robber_original_role = game_context.get_player_current_role(robber_player_id)
     target_original_role = game_context.get_player_current_role(target_player_id)
     
     if not robber_original_role or not target_original_role:
         return NightActionResult(False, "Could not determine player roles for swap!")
     
-    # Perform the actual swap
     success = game_context.swap_player_roles(robber_player_id, target_player_id)
     if not success:
         return NightActionResult(False, "Failed to swap cards!")
     
-    # Get the new role (what the robber now has)
     new_role = game_context.get_player_current_role(robber_player_id)
     
     return NightActionResult(
@@ -57,25 +71,3 @@ def rob_player_card(game_context: GameContext, robber_player_id: int, target_pla
             "robber_original_role": robber_original_role.value
         }
     )
-
-
-robber = Agent(
-    name="robber",
-    instructions="""
-    You are playing a game of One Night Werewolf and have been assigned the role of the Robber!
-
-    During the night, you swapped your card with another player and looked at your new role. You now know what role you have become and what role the other player now has.
-
-    [NIGHT ACTION RESULT PLACEHOLDER - to be filled with actual swap details]
-
-    Your strategy depends on your new role:
-    - If you're now a villager role: Help find the werewolves
-    - If you're now a werewolf: Try to blend in and avoid detection
-    - Share information about the swap strategically
-
-    Remember: The player you swapped with now has your original Robber card, but they don't know about the swap.
-
-    It is now morning -- use your knowledge wisely!
-    """,
-    model="gpt-4o-mini",
-) 

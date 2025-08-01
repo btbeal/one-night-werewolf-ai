@@ -1,15 +1,37 @@
-from agents import Agent, Runner
-from dotenv import load_dotenv
-import os
 from game_context.game_context import GameContext
 from game_context.roles import Role
-from .common_tools import NightActionResult
+from game_agents.common_tools import NightActionResult
+from game_agents.agent_registry import register_agent
+from game_agents.base_agent import BaseAgent
+import textwrap
 
-load_dotenv()
 
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+@register_agent(Role.MASON)
+class MasonAgent(BaseAgent):
+    def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
+        super().__init__(player_id, player_name, initial_role, is_ai)
 
+    def _get_system_prompt(self):
+        return textwrap.dedent(
+            f"""
+            You are playing a game of One Night Werewolf and have been assigned the role of a Mason! Your name is {self.player_name}.
 
+            During the night, you looked for other Masons. Masons are on the villager team and know each other.
+
+            Your strategy should be to:
+            1. Coordinate with other Masons if they exist
+            2. Use your confirmed villager allies to build trust
+            3. Help identify werewolves as a trusted group
+            4. If you're the only Mason, use that information strategically
+
+            You are on the villager team and want to eliminate werewolves.
+
+            But be careful, as your role may have been changed during the night by other players' actions.
+
+            It is now morning -- time to work with your Mason allies!
+            """
+        )
+    
 def see_mason_allies(game_context: GameContext, mason_player_id: int) -> NightActionResult:
     """
     Mason sees other masons
@@ -49,26 +71,3 @@ def see_mason_allies(game_context: GameContext, mason_player_id: int) -> NightAc
             "is_only_mason": False
         }
     )
-
-
-mason = Agent(
-    name="mason",
-    instructions="""
-    You are playing a game of One Night Werewolf and have been assigned the role of a Mason!
-
-    During the night, you looked for other Masons. Masons are on the villager team and know each other.
-
-    Your strategy should be to:
-    1. Coordinate with other Masons if they exist
-    2. Use your confirmed villager allies to build trust
-    3. Help identify werewolves as a trusted group
-    4. If you're the only Mason, use that information strategically
-
-    You are on the villager team and want to eliminate werewolves.
-
-    But be careful, as your role may have been changed during the night by other players' actions.
-
-    It is now morning -- time to work with your Mason allies!
-    """,
-    model="gpt-4o-mini",
-)

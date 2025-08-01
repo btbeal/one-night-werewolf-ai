@@ -1,7 +1,9 @@
 import textwrap
 from .base_agent import BaseAgent
+from game_context.roles import Role
+from game_agents.agent_registry import register_agent
 
-
+@register_agent(Role.VILLAGER)
 class VillagerAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
         super().__init__(player_id, player_name, initial_role, is_ai)
@@ -10,7 +12,7 @@ class VillagerAgent(BaseAgent):
         return textwrap.dedent(
             f"""You are playing a game of One Night Werewolf!
 
-                You are playing as {self.player_name} and your initial role is {self.initial_role}.
+                You are playing as {self.player_name} and your initial role is a Villager.
 
                 Your role is simple but important: you are on the team of villagers and must help identify and vote out the werewolves. You have no special night abilities, but you are a crucial voice in the discussion.
 

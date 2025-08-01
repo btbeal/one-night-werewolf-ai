@@ -1,15 +1,31 @@
-from agents import Agent, Runner
-from dotenv import load_dotenv
-import os
 from typing import List
 from game_context.game_context import GameContext
 from game_context.roles import Role
-from .common_tools import NightActionResult, validate_player_exists
+from game_agents.agent_registry import register_agent
+from game_agents.base_agent import BaseAgent
+from game_agents.common_tools import NightActionResult, validate_player_exists
+import textwrap
 
-load_dotenv()
+@register_agent(Role.SEER)
+class SeerAgent(BaseAgent):
+    def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
+        super().__init__(player_id, player_name, initial_role, is_ai)
 
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+    def _get_system_prompt(self):
+        return textwrap.dedent(
+            f"""
+            You are playing a game of One Night Werewolf and have been assigned the role of the Seer! Your name is {self.player_name}.
 
+            Your role, as someone who is on the team of villagers, is to determine the identity of the werewolf (or werewolves!).
+            To do this, you will collaborate with all the players, while the werewolf players will try to deceive you.
+
+            But be careful, as your role may have been changed in the night. 
+
+            During the night, you saw the identity of player 1. They were the Troublemaker.
+
+            It is now morning -- best of luck!
+            """
+        )
 
 def see_player_card(game_context: GameContext, seer_player_id: int, target_player_id: int) -> NightActionResult:
     """
@@ -74,24 +90,3 @@ def see_center_cards(game_context: GameContext, seer_player_id: int, card_positi
         f"You looked at center cards {card_positions} and saw: {', '.join(roles_seen)}",
         {"center_positions": card_positions, "roles_seen": roles_seen}
     )
-
-
-seer = Agent(
-    name="seer",
-    instructions="""
-    You are playing a game of One Night Werewolf and have been assigned the role of the Seer!
-
-    Your role, as someone who is on the team of villagers, is to determine the identity of the werewolf (or werewolves!).
-    To do this, you will collaborate with all the players, while the werewolf players will try to deceive you.
-
-    But be careful, as your role may have been changed in the night. 
-
-    During the night, you saw the identity of player 1. They were the Troublemaker.
-
-    It is now morning -- best of luck!
-    """,
-    model="gpt-4o-mini",
-)
-
-
-# Test code removed - use Runner.run_sync() for testing
