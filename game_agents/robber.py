@@ -137,7 +137,6 @@ def robber_swap(game_context: GameContext, robber_player_id: int, target_player_
     Returns:
         String result of the swap
     """
-    # Resolve player name to ID
     success, resolution_message, target_player_id = resolve_player_name_to_id(
         game_context, target_player_name, robber_player_id
     )
@@ -145,17 +144,13 @@ def robber_swap(game_context: GameContext, robber_player_id: int, target_player_
     if not success:
         return resolution_message
     
-    # Perform the swap
     result = rob_player_card(game_context, robber_player_id, target_player_id)
-    
-    # Add duplicate name warning if needed
+
     final_message = result.message
-    if resolution_message:  # There was a duplicate name warning
+    if resolution_message:
         final_message = resolution_message + " " + result.message
     
-    # Add successful results to the robber's personal knowledge
     if result.success:
-        # Find the robber agent and add to their knowledge
         robber_player = game_context.get_player(robber_player_id)
         if hasattr(robber_player, 'personal_knowledge'):
             robber_player.personal_knowledge.append(final_message)
