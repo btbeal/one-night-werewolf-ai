@@ -95,6 +95,18 @@ class GameContext(BaseModel):
         if 0 <= position < len(self.center_cards):
             self.center_cards[position] = role
     
+    def swap_player_roles(self, player1_id: int, player2_id: int) -> bool:
+        """Swap the current roles of two players"""
+        player1 = self.get_player(player1_id)
+        player2 = self.get_player(player2_id)
+        
+        if not player1 or not player2:
+            return False
+            
+        # Perform the swap
+        player1.current_role, player2.current_role = player2.current_role, player1.current_role
+        return True
+    
     def get_role_assignments_summary(self) -> Dict[str, Any]:
         """Get a summary of all role assignments"""
         player_roles = {pid: player.current_role for pid, player in self.players.items()}
