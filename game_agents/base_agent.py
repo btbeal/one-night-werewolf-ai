@@ -275,6 +275,16 @@ class BaseAgent:
                 robber_player_id=self.player_id,
                 target_player_name=args.get('target_player_name')
             )
+        elif name == "troublemaker_swap":
+            if not game_context:
+                return "Error: Game context required for this tool"
+            from game_agents.troublemaker import troublemaker_swap
+            return troublemaker_swap(
+                game_context=game_context,
+                troublemaker_player_id=self.player_id,
+                player1_name=args.get('player1_name'),
+                player2_name=args.get('player2_name')
+            )
         else:
             return f"Unknown tool: {name}"
     

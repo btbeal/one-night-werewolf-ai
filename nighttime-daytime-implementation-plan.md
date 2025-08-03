@@ -242,4 +242,12 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
              - Personal knowledge integration
              - **Simplified Design**: Single system prompt (no nighttime prompt needed)
              - Follows same pattern as Mason and Werewolf
-           - ⏳ Ready for Phase 2.7: Continue with remaining roles (Troublemaker, Drunk)
+           - ✅ **Completed Troublemaker Swap Tool (Phase 2.7)**:
+             - Interactive nighttime tool for strategic player swapping
+             - Player name-based interface (two players: player1_name, player2_name)
+             - Duplicate name handling via `resolve_player_name_to_id` 
+             - Personal knowledge integration
+             - Clean separate nighttime/daytime prompts
+             - Comprehensive error handling (self-swap, same player, non-existent players)
+             - Follows same pattern as Seer and Robber tools
+           - ⏳ Ready for Phase 2.8: Continue with remaining roles (Drunk)

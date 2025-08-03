@@ -2,19 +2,76 @@ from game_context.game_context import GameContext
 from game_context.roles import Role
 from game_agents.agent_registry import register_agent
 from game_agents.base_agent import BaseAgent
-from game_agents.common_tools import NightActionResult, validate_player_exists, validate_different_players
+from game_agents.common_tools import NightActionResult, validate_player_exists, validate_different_players, resolve_player_name_to_id
 import textwrap
 
+# Troublemaker tool definition
+TROUBLEMAKER_SWAP_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "troublemaker_swap",
+        "description": "As the Troublemaker, swap the cards of two other players (nighttime only)",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "player1_name": {
+                    "type": "string",
+                    "description": "Name of the first player to swap cards with"
+                },
+                "player2_name": {
+                    "type": "string",
+                    "description": "Name of the second player to swap cards with"
+                }
+            },
+            "required": ["player1_name", "player2_name"]
+        }
+    }
+}
 
 @register_agent(Role.TROUBLEMAKER)
 class TroublemakerAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
-        super().__init__(player_id, player_name, initial_role, is_ai)
+        super().__init__(player_id, player_name, initial_role, is_ai, tools=[TROUBLEMAKER_SWAP_TOOL])
+        self.nighttime_tool = TROUBLEMAKER_SWAP_TOOL.get("function", {}).get("name")
 
-    def _get_system_prompt(self):
+    def execute_night_action(self, game_context: GameContext):
+        """Troublemaker has no automatic night action - they must use the troublemaker_swap tool"""
+        return "As the Troublemaker, you must choose which two players to swap using the troublemaker_swap tool."
+
+    def _get_system_prompt(self, game_context: GameContext = None):
+        if game_context and game_context.is_nighttime:
+            return self._get_nighttime_prompt(game_context)
+        else:
+            return self._get_daytime_prompt(game_context)
+    
+    def _get_nighttime_prompt(self, game_context: GameContext):
+        player_list = game_context.get_other_player_names_in_text(self.player_id)
+        
         return textwrap.dedent(
-            f"""
-            You are playing a game of One Night Werewolf and have been assigned the role of the Troublemaker! Your name is {self.player_name}.
+            f"""You are playing One Night Werewolf with the initial role of {self.initial_role}! Your name is {self.player_name}.
+
+            {player_list}
+
+            It is now nighttime and you must use the "troublemaker_swap" tool to swap the cards of two other players.
+            
+            Usage: troublemaker_swap with {{"player1_name": "<player_name>", "player2_name": "<player_name>"}}
+            
+            Choose strategically - you won't see their cards, but the swap will create chaos that can help the village!"""
+        )
+    
+    def _get_daytime_prompt(self, game_context: GameContext = None):
+        night_knowledge = ""
+        if self.personal_knowledge:
+            night_knowledge = f"\n\nWhat you learned during the night phase:\n" + "\n".join(f"- {knowledge}" for knowledge in self.personal_knowledge)
+        
+        player_list = ""
+        if game_context:
+            player_list = game_context.get_other_player_names_in_text(self.player_id)
+        
+        return textwrap.dedent(
+            f"""You are playing One Night Werewolf with the initial role of {self.initial_role}! Your name is {self.player_name}.
+
+            {player_list}{night_knowledge}
 
             During the night, you swapped the cards of two other players (without looking at them). Those players now have each other's original roles, but they don't know about the swap.
 
@@ -26,13 +83,10 @@ class TroublemakerAgent(BaseAgent):
 
             You are on the villager team and want to eliminate werewolves.
 
-            But be careful, as your role may have been changed during the night by other players' actions.
-
-            It is now morning -- time to reveal the chaos you've created!
-            """
+            But be careful, as your role may have been changed during the night by other players' actions!"""
         )
 
-def troublemaker_swap(game_context: GameContext, troublemaker_player_id: int, player1_id: int, player2_id: int) -> NightActionResult:
+def swap_two_players(game_context: GameContext, troublemaker_player_id: int, player1_id: int, player2_id: int) -> NightActionResult:
     """
     Troublemaker swaps two other players' cards (without looking)
     
@@ -78,3 +132,55 @@ def troublemaker_swap(game_context: GameContext, troublemaker_player_id: int, pl
             "player2_had": player2_original_role.value if player2_original_role else "unknown"
         }
     )
+
+
+def troublemaker_swap(game_context: GameContext, troublemaker_player_id: int, player1_name: str, player2_name: str) -> str:
+    """
+    Troublemaker swap tool - allows the troublemaker to swap two other players' cards
+    
+    Args:
+        game_context: Current game state
+        troublemaker_player_id: ID of the troublemaker making the swap
+        player1_name: Name of the first player to swap
+        player2_name: Name of the second player to swap
+    
+    Returns:
+        String result of the swap
+    """
+    # Resolve player names to IDs
+    success1, resolution_message1, player1_id = resolve_player_name_to_id(
+        game_context, player1_name, troublemaker_player_id
+    )
+    
+    if not success1:
+        return resolution_message1
+    
+    success2, resolution_message2, player2_id = resolve_player_name_to_id(
+        game_context, player2_name, troublemaker_player_id
+    )
+    
+    if not success2:
+        return resolution_message2
+    
+    # Perform the swap
+    result = swap_two_players(game_context, troublemaker_player_id, player1_id, player2_id)
+    
+    # Combine any duplicate name warnings
+    warnings = []
+    if resolution_message1:
+        warnings.append(resolution_message1)
+    if resolution_message2:
+        warnings.append(resolution_message2)
+    
+    final_message = result.message
+    if warnings:
+        final_message = " ".join(warnings) + " " + result.message
+    
+    # Add successful results to the troublemaker's personal knowledge
+    if result.success:
+        # Find the troublemaker agent and add to their knowledge
+        troublemaker_player = game_context.get_player(troublemaker_player_id)
+        if hasattr(troublemaker_player, 'personal_knowledge'):
+            troublemaker_player.personal_knowledge.append(final_message)
+    
+    return final_message
