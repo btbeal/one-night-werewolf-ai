@@ -239,78 +239,31 @@ class BaseAgent:
     
     def get_forced_nighttime_tool(self) -> Optional[str]:
         """Return the forced nighttime tool if one is set."""
-        return self.nighttime_tool  # None = automatic action, tool name = forced tool
+        return self.nighttime_tool
     
     def call_tool(self, name: str, args: dict, game_context: GameContext = None):
+        """
+        Call a tool. Must be implemented by subclasses to define their specific tools.
+        """
+        raise NotImplementedError("Subclasses must implement call_tool to define their available tools")
+    
+    def _call_common_tool(self, name: str, args: dict, game_context: GameContext = None):
+        """Helper method for common tools available to all agents"""
         if not self.is_tool_available(name, game_context):
             return f"The tool '{name}' is not available during the current game phase."
-
-        tool_registry = {
-            "inquire_about_another_player": {
-                "module": "game_agents.common_tools",
-                "function": "inquire_about_another_player",
-                "args": lambda: {
-                    "player_name": args['player_name'],
-                    "question": args['question'],
-                    "game_context": game_context,
-                    "questioning_player_name": self.player_name
-                }
-            },
-            "seer_investigate": {
-                "module": "game_agents.seer",
-                "function": "seer_investigate",
-                "args": lambda: {
-                    "game_context": game_context,
-                    "seer_player_id": self.player_id,
-                    "investigation_type": args.get('investigation_type'),
-                    "target_player_name": args.get('target_player_name'),
-                    "card_positions": args.get('card_positions')
-                }
-            },
-            "robber_swap": {
-                "module": "game_agents.robber",
-                "function": "robber_swap",
-                "args": lambda: {
-                    "game_context": game_context,
-                    "robber_player_id": self.player_id,
-                    "target_player_name": args.get('target_player_name')
-                }
-            },
-            "troublemaker_swap": {
-                "module": "game_agents.troublemaker", 
-                "function": "troublemaker_swap",
-                "args": lambda: {
-                    "game_context": game_context,
-                    "troublemaker_player_id": self.player_id,
-                    "player1_name": args.get('player1_name'),
-                    "player2_name": args.get('player2_name')
-                }
-            },
-            "drunk_swap": {
-                "module": "game_agents.drunk",
-                "function": "drunk_swap", 
-                "args": lambda: {
-                    "game_context": game_context,
-                    "drunk_player_id": self.player_id,
-                    "center_position": args.get('center_position')
-                }
-            }
-        }
         
-        if name not in tool_registry:
-            return f"Unknown tool: {name}"
-                
-        try:
-            tool_config = tool_registry[name]
-            module = __import__(tool_config["module"], fromlist=[tool_config["function"]])
-            function = getattr(module, tool_config["function"])
-            result = function(**tool_config["args"]())
+        if name == "inquire_about_another_player":
+            result = inquire_about_another_player(
+                player_name=args['player_name'],
+                question=args['question'],
+                game_context=game_context,
+                questioning_player_name=self.player_name
+            )
             
-        except Exception as e:
-            return f"Error calling tool {name}: {str(e)}"
-        
-        if result and isinstance(result, str) and not result.startswith("Error:"):
-            self.personal_knowledge.append(result)
-        
-        return result
+            if result and isinstance(result, str) and not result.startswith("Error:"):
+                self.personal_knowledge.append(result)
+            
+            return result
+        else:
+            return f"Unknown common tool: {name}"
     

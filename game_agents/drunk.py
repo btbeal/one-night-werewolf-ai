@@ -35,6 +35,25 @@ class DrunkAgent(BaseAgent):
     def execute_night_action(self, game_context: GameContext):
         """Drunk has no automatic night action - they must use the drunk_swap tool"""
         return "As the Drunk, you must choose which center card to swap with using the drunk_swap tool."
+    
+    def call_tool(self, name: str, args: dict, game_context: GameContext = None):
+        """Handle Drunk-specific tools and common tools"""
+        if not self.is_tool_available(name, game_context):
+            return f"The tool '{name}' is not available during the current game phase."
+        
+        if name == "drunk_swap":
+            result = drunk_swap(
+                game_context=game_context,
+                drunk_player_id=self.player_id,
+                center_position=args.get('center_position')
+            )
+            
+            if result and isinstance(result, str) and not result.startswith("Error:"):
+                self.personal_knowledge.append(result)
+            
+            return result
+        else:
+            return self._call_common_tool(name, args, game_context)
 
     def _get_system_prompt(self, game_context: GameContext = None):
         if game_context and game_context.is_nighttime:

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Any, TYPE_CHECKING
+from typing import List, Dict, Optional, Any
 from .messages import ConversationHistory
 from .roles import Role
 
@@ -15,18 +15,13 @@ NIGHT_PHASE_ORDER = [
     "insomniac"      # Insomniac checks their final role
 ]
 
-if TYPE_CHECKING:
-    from game_agents.base_agent import BaseAgent
-
 
 class GameContext(BaseModel):
     """Complete game context including all players and conversation"""
     players: Dict[int, Any] = Field(default_factory=dict)
     conversation: ConversationHistory = Field(default_factory=ConversationHistory)
     center_cards: List[Role] = Field(default_factory=list)
-    
-    # Phase tracking
-    is_nighttime: bool = True  # Game starts in nighttime phase
+    is_nighttime: bool = True
     night_phase_order: List[str] = Field(default_factory=lambda: NIGHT_PHASE_ORDER.copy())
     night_actions_completed: Dict[str, bool] = Field(default_factory=dict)
     

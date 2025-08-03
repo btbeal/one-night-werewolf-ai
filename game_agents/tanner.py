@@ -13,6 +13,10 @@ class TannerAgent(BaseAgent):
         """Tanner has no night action"""
         return "As a Tanner, you have no special nighttime abilities."
 
+    def call_tool(self, name: str, args: dict, game_context: GameContext = None):
+        """Handle common tools (Tanner has no specific tools)"""
+        return self._call_common_tool(name, args, game_context)
+
     def _get_system_prompt(self, game_context: GameContext = None):
         night_knowledge = ""
         if self.personal_knowledge:

@@ -17,6 +17,10 @@ class MasonAgent(BaseAgent):
         self.personal_knowledge.append(mason_result.message)
         return mason_result.message
 
+    def call_tool(self, name: str, args: dict, game_context: GameContext = None):
+        """Handle common tools (Mason has no specific tools)"""
+        return self._call_common_tool(name, args, game_context)
+
     def _get_system_prompt(self):
         night_knowledge = ""
         if self.personal_knowledge:

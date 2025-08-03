@@ -281,16 +281,24 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
              - Strategic suspicious behavior guidance
              - Standard execute_night_action (no-op)
            
-           - ✅ **Final Architecture Improvement - Tool Registry Pattern**:
-             - **Problem**: Long chain of if/elif statements in `BaseAgent.call_tool` (60+ lines)
-             - **Solution**: Dynamic tool registry with configuration-driven function calls
-             - **Benefits**: 
-               * Easy to add new tools (just add registry entry)
-               * Clean separation of configuration vs execution
-               * Dynamic imports only when needed
-               * Centralized argument mapping
-               * Better error handling and debugging
-               * Much more maintainable and extensible
-             - **Pattern**: `{"module": "...", "function": "...", "args": lambda: {...}}`
+           - ✅ **Final Architecture Improvement - Agent-Specific Tool Encapsulation**:
+             - **Problem**: Centralized tool registry created duplication between tool schemas and registry
+             - **Solution**: Each agent implements its own `call_tool()` method with only its specific tools
+             - **Pattern**: 
+               ```python
+               class SeerAgent(BaseAgent):
+                   def call_tool(self, name, args, game_context):
+                       if name == "seer_investigate":
+                           return seer_investigate(...)
+                       else:
+                           return self._call_common_tool(name, args, game_context)
+               ```
+             - **Benefits**:
+               * Perfect encapsulation - SeerAgent only knows seer_investigate
+               * No duplication between tool schema and registry
+               * Easy to add new agents without touching BaseAgent
+               * Clear separation of concerns
+               * Self-contained, modular design
+               * Better error handling (tool errors clearly in right agent)
            
            - 🎉 **Phase 2 Complete - All Roles Implemented with Clean Architecture!**

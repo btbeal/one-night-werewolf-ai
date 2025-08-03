@@ -75,6 +75,10 @@ class WerewolfAgent(BaseAgent):
         
         return final_message
     
+    def call_tool(self, name: str, args: dict, game_context: GameContext = None):
+        """Handle common tools (Werewolf has no specific tools)"""
+        return self._call_common_tool(name, args, game_context)
+    
     def _get_system_prompt(self):
         night_knowledge = ""
         if self.personal_knowledge:
