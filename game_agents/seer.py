@@ -207,11 +207,4 @@ def seer_investigate(game_context: GameContext, seer_player_id: int, investigati
     else:
         return "Error: investigation type must be 'player' or 'center'"
     
-    # Add successful results to the seer's personal knowledge
-    if result.success:
-        # Find the seer agent and add to their knowledge
-        seer_player = game_context.get_player(seer_player_id)
-        if hasattr(seer_player, 'personal_knowledge'):
-            seer_player.personal_knowledge.append(final_message)
-    
     return final_message

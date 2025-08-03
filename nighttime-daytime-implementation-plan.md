@@ -250,4 +250,10 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
              - Clean separate nighttime/daytime prompts
              - Comprehensive error handling (self-swap, same player, non-existent players)
              - Follows same pattern as Seer and Robber tools
+           - ✅ **Code Quality Improvement - Centralized Knowledge Management**:
+             - **Elegant Solution**: All tool functions now focus purely on logic
+             - **BaseAgent.call_tool**: Automatically appends successful results to `personal_knowledge`
+             - **DRY Principle**: Eliminated duplicate knowledge management code across tools
+             - **Consistent Behavior**: All tools get the same knowledge handling
+             - **Error Filtering**: Automatically skips error messages and empty results
            - ⏳ Ready for Phase 2.8: Continue with remaining roles (Drunk)

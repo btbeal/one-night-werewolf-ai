@@ -245,11 +245,13 @@ class BaseAgent:
         # Check if tool is available in current phase
         if not self.is_tool_available(name, game_context):
             return f"The tool '{name}' is not available during the current game phase."
+
+        result = None
         
         if name == "inquire_about_another_player":
             if not game_context:
                 return "Error: Game context required for this tool"
-            return inquire_about_another_player(
+            result = inquire_about_another_player(
                 player_name=args['player_name'],
                 question=args['question'],
                 game_context=game_context,
@@ -259,7 +261,7 @@ class BaseAgent:
             if not game_context:
                 return "Error: Game context required for this tool"
             from game_agents.seer import seer_investigate
-            return seer_investigate(
+            result = seer_investigate(
                 game_context=game_context,
                 seer_player_id=self.player_id,
                 investigation_type=args.get('investigation_type'),
@@ -270,7 +272,7 @@ class BaseAgent:
             if not game_context:
                 return "Error: Game context required for this tool"
             from game_agents.robber import robber_swap
-            return robber_swap(
+            result = robber_swap(
                 game_context=game_context,
                 robber_player_id=self.player_id,
                 target_player_name=args.get('target_player_name')
@@ -279,7 +281,7 @@ class BaseAgent:
             if not game_context:
                 return "Error: Game context required for this tool"
             from game_agents.troublemaker import troublemaker_swap
-            return troublemaker_swap(
+            result = troublemaker_swap(
                 game_context=game_context,
                 troublemaker_player_id=self.player_id,
                 player1_name=args.get('player1_name'),
@@ -287,4 +289,10 @@ class BaseAgent:
             )
         else:
             return f"Unknown tool: {name}"
+        
+        # Auto-append successful tool results to personal knowledge
+        if result and isinstance(result, str) and not result.startswith("Error:"):
+            self.personal_knowledge.append(result)
+        
+        return result
     

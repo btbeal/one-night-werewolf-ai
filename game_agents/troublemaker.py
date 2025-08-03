@@ -176,11 +176,4 @@ def troublemaker_swap(game_context: GameContext, troublemaker_player_id: int, pl
     if warnings:
         final_message = " ".join(warnings) + " " + result.message
     
-    # Add successful results to the troublemaker's personal knowledge
-    if result.success:
-        # Find the troublemaker agent and add to their knowledge
-        troublemaker_player = game_context.get_player(troublemaker_player_id)
-        if hasattr(troublemaker_player, 'personal_knowledge'):
-            troublemaker_player.personal_knowledge.append(final_message)
-    
     return final_message

@@ -150,9 +150,4 @@ def robber_swap(game_context: GameContext, robber_player_id: int, target_player_
     if resolution_message:
         final_message = resolution_message + " " + result.message
     
-    if result.success:
-        robber_player = game_context.get_player(robber_player_id)
-        if hasattr(robber_player, 'personal_knowledge'):
-            robber_player.personal_knowledge.append(final_message)
-    
     return final_message
