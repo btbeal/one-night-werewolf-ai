@@ -1,32 +1,85 @@
 from game_context.game_context import GameContext
 from game_context.roles import Role
-from .common_tools import NightActionResult, validate_center_position
+from .common_tools import NightActionResult, validate_center_position, resolve_player_name_to_id
 from game_agents.agent_registry import register_agent
 from game_agents.base_agent import BaseAgent
 import textwrap
 
+# Drunk tool definition
+DRUNK_SWAP_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "drunk_swap",
+        "description": "As the Drunk, swap your card with a center card (nighttime only)",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "center_position": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2,
+                    "description": "Center card position to swap with (0, 1, or 2)"
+                }
+            },
+            "required": ["center_position"]
+        }
+    }
+}
+
 @register_agent(Role.DRUNK)
 class DrunkAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
-        super().__init__(player_id, player_name, initial_role, is_ai)
+        super().__init__(player_id, player_name, initial_role, is_ai, tools=[DRUNK_SWAP_TOOL])
+        self.nighttime_tool = DRUNK_SWAP_TOOL.get("function", {}).get("name")
 
-    def _get_system_prompt(self):
+    def execute_night_action(self, game_context: GameContext):
+        """Drunk has no automatic night action - they must use the drunk_swap tool"""
+        return "As the Drunk, you must choose which center card to swap with using the drunk_swap tool."
+
+    def _get_system_prompt(self, game_context: GameContext = None):
+        if game_context and game_context.is_nighttime:
+            return self._get_nighttime_prompt(game_context)
+        else:
+            return self._get_daytime_prompt(game_context)
+    
+    def _get_nighttime_prompt(self, game_context: GameContext):
+        player_list = game_context.get_other_player_names_in_text(self.player_id)
+        
         return textwrap.dedent(
-            f"""
-    You are playing a game of One Night Werewolf and have been assigned the role of the Drunk! Your name is {self.player_name}.
+            f"""You are playing One Night Werewolf with the initial role of {self.initial_role}! Your name is {self.player_name}.
 
-    During the night, you were required to swap your card with one of the center cards, but you didn't look at your new role. You have no idea what role you now have!
+            {player_list}
 
-    Your strategy should be to:
-    1. Be honest about being the original Drunk
-    2. Explain that you don't know your current role
-    3. Try to figure out what role you might have based on game flow
-    4. Help the village as best you can with limited information
+            It is now nighttime and you must use the "drunk_swap" tool to swap your card with a center card.
+            
+            Usage: drunk_swap with {{"center_position": <0, 1, or 2>}}
+            
+            Choose wisely - you won't see either card, so you'll have no idea what your new role is!"""
+        )
+    
+    def _get_daytime_prompt(self, game_context: GameContext = None):
+        night_knowledge = ""
+        if self.personal_knowledge:
+            night_knowledge = f"\n\nWhat you learned during the night phase:\n" + "\n".join(f"- {knowledge}" for knowledge in self.personal_knowledge)
+        
+        player_list = ""
+        if game_context:
+            player_list = game_context.get_other_player_names_in_text(self.player_id)
+        
+        return textwrap.dedent(
+            f"""You are playing One Night Werewolf with the initial role of {self.initial_role}! Your name is {self.player_name}.
 
-    But be careful, because you could be a werewolf by grabbing a werewolf card from the center during the night.
+            {player_list}{night_knowledge}
 
-    It is now morning -- time to figure out what team you're on, and rally the other players to your cause!
-    """
+            During the night, you swapped your card with a center card, but you didn't look at your new role. You have no idea what role you now have!
+
+            Your strategy should be to:
+            1. Be honest about being the original Drunk
+            2. Explain that you don't know your current role
+            3. Try to figure out what role you might have based on game flow
+            4. Help the village as best you can with limited information
+
+            But be careful, because you could be a werewolf now if you grabbed a werewolf card from the center during the night!"""
         )
 
 def drunk_swap_center(game_context: GameContext, drunk_player_id: int, center_position: int) -> NightActionResult:
@@ -68,4 +121,20 @@ def drunk_swap_center(game_context: GameContext, drunk_player_id: int, center_po
             "center_had": center_original_role.value
         }
     )
+
+
+def drunk_swap(game_context: GameContext, drunk_player_id: int, center_position: int) -> str:
+    """
+    Drunk swap tool - allows the drunk to swap with a center card
+    
+    Args:
+        game_context: Current game state
+        drunk_player_id: ID of the drunk making the swap
+        center_position: Center card position to swap with (0, 1, or 2)
+    
+    Returns:
+        String result of the swap
+    """
+    result = drunk_swap_center(game_context, drunk_player_id, center_position)
+    return result.message
 

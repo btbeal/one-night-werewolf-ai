@@ -256,4 +256,41 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
              - **DRY Principle**: Eliminated duplicate knowledge management code across tools
              - **Consistent Behavior**: All tools get the same knowledge handling
              - **Error Filtering**: Automatically skips error messages and empty results
-           - ⏳ Ready for Phase 2.8: Continue with remaining roles (Drunk)
+           - ✅ **Completed All Remaining Roles (Phase 2.8)**:
+             
+             **Drunk Agent (Tool-Based)**:
+             - Interactive nighttime tool for strategic center card swapping
+             - Center position selection (0, 1, or 2)
+             - No knowledge of new role (realistic drunk behavior)
+             - Phase-aware system prompts
+             - Centralized knowledge management
+             - Added `swap_player_with_center()` method to GameContext
+             
+             **Villager Agent (No Night Action)**:
+             - Clean system prompt with player list integration
+             - Standard execute_night_action (no-op)
+             - Follows simplified pattern like Insomniac
+             
+             **Hunter Agent (No Night Action)**:
+             - Special elimination revenge ability documentation
+             - Clean system prompt with strategic guidance
+             - Standard execute_night_action (no-op)
+             
+             **Tanner Agent (No Night Action)**:
+             - Unique win condition (must be eliminated to win)
+             - Strategic suspicious behavior guidance
+             - Standard execute_night_action (no-op)
+           
+           - ✅ **Final Architecture Improvement - Tool Registry Pattern**:
+             - **Problem**: Long chain of if/elif statements in `BaseAgent.call_tool` (60+ lines)
+             - **Solution**: Dynamic tool registry with configuration-driven function calls
+             - **Benefits**: 
+               * Easy to add new tools (just add registry entry)
+               * Clean separation of configuration vs execution
+               * Dynamic imports only when needed
+               * Centralized argument mapping
+               * Better error handling and debugging
+               * Much more maintainable and extensible
+             - **Pattern**: `{"module": "...", "function": "...", "args": lambda: {...}}`
+           
+           - 🎉 **Phase 2 Complete - All Roles Implemented with Clean Architecture!**
