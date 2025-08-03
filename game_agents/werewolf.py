@@ -58,7 +58,6 @@ class WerewolfAgent(BaseAgent):
         werewolf_result = see_werewolf_allies(game_context, self.player_id)
         
         if werewolf_result.data.get("is_lone_werewolf"):
-            
             eligible_center_cards = [card for card in game_context.center_cards if card.value.lower() != "werewolf"]
             
             if not eligible_center_cards:
@@ -68,22 +67,13 @@ class WerewolfAgent(BaseAgent):
             center_position = game_context.center_cards.index(chosen_card)
             center_info = f"As the lone werewolf, you automatically looked at center position {center_position} and saw the {chosen_card.value} card."
             
-            result = NightActionResult(
-                True,
-                werewolf_result.message + " " + center_info,
-                {
-                    **werewolf_result.data,
-                    "center_card_seen": chosen_card.value,
-                    "center_position": center_position
-                }
-            )
+            final_message = werewolf_result.message + " " + center_info
         else:
-            result = werewolf_result
+            final_message = werewolf_result.message
         
-        self.personal_knowledge.append(result.message)
-        game_context.mark_night_action_completed("werewolf")
+        self.personal_knowledge.append(final_message)
         
-        return result
+        return final_message
     
     def _get_system_prompt(self):
         night_knowledge = ""
