@@ -6,25 +6,82 @@ from game_agents.base_agent import BaseAgent
 from game_agents.common_tools import NightActionResult, validate_player_exists
 import textwrap
 
+# Seer tool definition
+SEER_INVESTIGATE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "seer_investigate",
+        "description": "As the Seer, investigate either another player's card or two center cards (nighttime only)",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "investigation_type": {
+                    "type": "string",
+                    "enum": ["player", "center"],
+                    "description": "Type of investigation: 'player' to look at another player's card, 'center' to look at center cards"
+                },
+                "target_player_id": {
+                    "type": "integer",
+                    "description": "Player ID to investigate (required when investigation_type='player')"
+                },
+                "card_positions": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0, "maximum": 2},
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "Exactly 2 center card positions to investigate (required when investigation_type='center')"
+                }
+            },
+            "required": ["investigation_type"]
+        }
+    }
+}
+
 @register_agent(Role.SEER)
 class SeerAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
-        super().__init__(player_id, player_name, initial_role, is_ai)
+        super().__init__(player_id, player_name, initial_role, is_ai, tools=[SEER_INVESTIGATE_TOOL])
+        self.nighttime_tool = "seer_investigate"
 
-    def _get_system_prompt(self):
+    def execute_night_action(self, game_context: GameContext):
+        """Seer has no automatic night action - they must use the seer_investigate tool"""
+        return "As the Seer, you must choose what to investigate using the seer_investigate tool."
+
+    def _get_system_prompt(self, game_context: GameContext = None):
+        night_knowledge = ""
+        if self.personal_knowledge:
+            night_knowledge = f"\n\nWhat you learned during the night phase:\n" + "\n".join(f"- {knowledge}" for knowledge in self.personal_knowledge)
+        
+        # Phase-specific instructions
+        phase_instructions = ""
+        if game_context and game_context.is_nighttime:
+            phase_instructions = f"""
+            
+            NIGHTTIME PHASE - YOU MUST INVESTIGATE:
+            You must use the "seer_investigate" tool to gain information. You have TWO options:
+
+            1. Look at another player's card:
+               investigation_type: "player", target_player_id: <player_id>
+               
+            2. Look at two center cards:
+               investigation_type: "center", card_positions: [<pos1>, <pos2>]
+               (positions are 0, 1, or 2)
+
+            Choose strategically based on the game situation!"""
+        else:
+            phase_instructions = "\n\nIt is now morning -- use your knowledge wisely to eliminate werewolves!"
+        
         return textwrap.dedent(
-            f"""
-            You are playing a game of One Night Werewolf and have been assigned the role of the Seer! Your name is {self.player_name}.
+            f"""You are playing a game of One Night Werewolf and have been assigned the role of the Seer! Your name is {self.player_name}.
 
-            Your role, as someone who is on the team of villagers, is to determine the identity of the werewolf (or werewolves!).
+            You are on the villager team and want to eliminate werewolves. As the Seer, you have special investigative abilities.
+
+            {night_knowledge}{phase_instructions}
+
+            Your role is to determine the identity of the werewolf (or werewolves!) and help eliminate them.
             To do this, you will collaborate with all the players, while the werewolf players will try to deceive you.
 
-            But be careful, as your role may have been changed in the night. 
-
-            During the night, you saw the identity of player 1. They were the Troublemaker.
-
-            It is now morning -- best of luck!
-            """
+            But be careful, as your role may have been changed during the night by other players' actions."""
         )
 
 def see_player_card(game_context: GameContext, seer_player_id: int, target_player_id: int) -> NightActionResult:
@@ -90,3 +147,42 @@ def see_center_cards(game_context: GameContext, seer_player_id: int, card_positi
         f"You looked at center cards {card_positions} and saw: {', '.join(roles_seen)}",
         {"center_positions": card_positions, "roles_seen": roles_seen}
     )
+
+
+def seer_investigate(game_context: GameContext, seer_player_id: int, investigation_type: str, target_player_id: int = None, card_positions: list = None) -> str:
+    """
+    Seer investigate tool - allows the seer to investigate either a player or center cards
+    
+    Args:
+        game_context: Current game state
+        seer_player_id: ID of the seer making the investigation
+        investigation_type: 'player' or 'center'
+        target_player_id: Player ID to investigate (required for 'player' type)
+        card_positions: List of 2 center card positions (required for 'center' type)
+    
+    Returns:
+        String result of the investigation
+    """
+    if investigation_type == 'player':
+        if target_player_id is None:
+            return "Error: target_player_id required for player investigation"
+        
+        result = see_player_card(game_context, seer_player_id, target_player_id)
+        
+    elif investigation_type == 'center':
+        if not card_positions:
+            return "Error: card_positions required for center card investigation"
+        
+        result = see_center_cards(game_context, seer_player_id, card_positions)
+        
+    else:
+        return "Error: investigation type must be 'player' or 'center'"
+    
+    # Add successful results to the seer's personal knowledge
+    if result.success:
+        # Find the seer agent and add to their knowledge
+        seer_player = game_context.get_player(seer_player_id)
+        if hasattr(seer_player, 'personal_knowledge'):
+            seer_player.personal_knowledge.append(result.message)
+    
+    return result.message

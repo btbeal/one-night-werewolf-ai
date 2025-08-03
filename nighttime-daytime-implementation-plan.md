@@ -219,4 +219,13 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
   - Handles single mason scenario appropriately
   - Night knowledge integrated into system prompt  
   - Clean, concise messaging consistent with other roles
-- ⏳ Ready for Phase 2.4: Continue with other roles (Seer, Robber, etc.)
+- ✅ **Completed Seer Investigation Tool (Phase 2.4)**:
+  - Interactive nighttime tool (not automatic)
+  - Two investigation options: player or center cards
+  - Proper OpenAI function calling implementation
+  - Strategic choice left to the agent
+  - Personal knowledge integration
+  - **Clean Abstraction**: `get_forced_nighttime_tool()` method returns `self.nighttime_tool` (singular)
+  - **Phase-Aware System Prompts**: Different instructions for night vs day
+  - **Forced Tool Choice**: `tool_choice` parameter during nighttime for agents that need it
+- ⏳ Ready for Phase 2.5: Continue with other roles (Robber, Insomniac, etc.)

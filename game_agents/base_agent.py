@@ -2,6 +2,7 @@ from openai import OpenAI
 import os
 import json
 import textwrap
+from typing import Optional
 from pydantic import BaseModel
 from game_context.game_context import GameContext
 from game_context.messages import ConversationHistory
@@ -78,7 +79,7 @@ class BaseAgent:
         self.is_ai = is_ai
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.tools = common_tools + tools
-        self.nighttime_tools = []  # List of nighttime-only tool names
+        self.nighttime_tool = None  # Single nighttime-only tool name
     
     def act(
             self,
@@ -144,7 +145,12 @@ class BaseAgent:
             )
         
     def _invoke_model(self, conversation_history: ConversationHistory, prompt: str, prompt_is_another_player_question: bool = False, questioning_player_name: str = "", game_context: GameContext = None) -> ONWAgentResponse:
-        system_prompt = self._get_system_prompt()
+        # Pass game_context to system prompt (for phase-aware prompts)
+        try:
+            system_prompt = self._get_system_prompt(game_context)
+        except TypeError:
+            # Fallback for agents that don't accept game_context parameter
+            system_prompt = self._get_system_prompt()
         user_prompt = self._get_prompt(conversation_history, prompt, prompt_is_another_player_question, questioning_player_name)
         
         messages = [
@@ -152,12 +158,21 @@ class BaseAgent:
             {"role": "user", "content": user_prompt}
         ]
         
-        response = self.client.chat.completions.parse(
-            model=self.model,
-            messages=messages,
-            tools=self.tools if self.tools else None,
-            response_format=ONWAgentResponse
-        )
+        # Determine if we should force tool choice (nighttime seer)
+        api_params = {
+            "model": self.model,
+            "messages": messages,
+            "tools": self.tools if self.tools else None,
+            "response_format": ONWAgentResponse
+        }
+        
+        # Force tool usage for agents that require it during nighttime
+        if game_context.is_nighttime:
+            forced_tool = self.get_forced_nighttime_tool()
+            if forced_tool:
+                api_params["tool_choice"] = {"type": "function", "function": {"name": forced_tool}}
+        
+        response = self.client.chat.completions.parse(**api_params)
 
         raw_response = response.choices[0].message.content
         tool_calls_made = []
@@ -218,14 +233,17 @@ class BaseAgent:
 
     def is_tool_available(self, tool_name: str, game_context: GameContext = None) -> bool:
         """Check if a tool is available based on current game phase"""
-        if tool_name in self.nighttime_tools:
+        if tool_name == self.nighttime_tool:
             return game_context and game_context.is_nighttime
         return True  # Daytime tools always available
     
     def execute_night_action(self, game_context: GameContext):
-        """Execute this agent's automatic nighttime action. Override in subclasses."""
-        # Default implementation - no night action
-        return None
+        """Execute this agent's automatic nighttime action. Must be implemented by subclasses."""
+        raise NotImplementedError("Subclasses must implement execute_night_action")
+    
+    def get_forced_nighttime_tool(self) -> Optional[str]:
+        """Return the forced nighttime tool if one is set."""
+        return self.nighttime_tool  # None = automatic action, tool name = forced tool
     
     def call_tool(self, name: str, args: dict, game_context: GameContext = None):
         # Check if tool is available in current phase
@@ -241,7 +259,17 @@ class BaseAgent:
                 game_context=game_context,
                 questioning_player_name=self.player_name
             )
-
+        elif name == "seer_investigate":
+            if not game_context:
+                return "Error: Game context required for this tool"
+            from game_agents.seer import seer_investigate
+            return seer_investigate(
+                game_context=game_context,
+                seer_player_id=self.player_id,
+                investigation_type=args.get('investigation_type'),
+                target_player_id=args.get('target_player_id'),
+                card_positions=args.get('card_positions')
+            )
         else:
             return f"Unknown tool: {name}"
     
