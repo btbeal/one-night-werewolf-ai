@@ -3,7 +3,6 @@ from game_context.roles import Role
 from game_agents.common_tools import NightActionResult
 from game_agents.agent_registry import register_agent
 from game_agents.base_agent import BaseAgent
-from game_agents.common_tools import NightActionResult
 import textwrap
 
 
@@ -12,12 +11,26 @@ class MinionAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
         super().__init__(player_id, player_name, initial_role, is_ai)
 
+    def execute_night_action(self, game_context: GameContext):
+        """Execute the automatic minion night action and update personal knowledge"""
+        minion_result = see_all_werewolves(game_context, self.player_id)
+        
+        # Add info to personal knowledge (will appear in system prompt)
+        self.personal_knowledge.append(minion_result.message)
+        
+        return minion_result.message
+
     def _get_system_prompt(self):
+        night_knowledge = ""
+        if self.personal_knowledge:
+            night_knowledge = f"\n\nWhat you learned during the night phase:\n" + "\n".join(f"- {knowledge}" for knowledge in self.personal_knowledge)
+        
         return textwrap.dedent(
-            f"""
-            You are playing a game of One Night Werewolf and have been assigned the role of the Minion! Your name is {self.player_name}.
+            f"""You are playing a game of One Night Werewolf and have been assigned the role of the Minion! Your name is {self.player_name}.
 
             You are on the werewolf team! During the night, you learned who the werewolves are, but they don't know who you are.
+
+            {night_knowledge}
 
             Your win condition: You win if no werewolves are eliminated, even if you are eliminated.
 
@@ -26,7 +39,10 @@ class MinionAgent(BaseAgent):
             2. Cast suspicion on villagers
             3. Be willing to sacrifice yourself to save werewolves
             4. Don't claim to be a werewolf (you're not one)
-            """
+
+            But be careful, as your role may have been changed during the night by other players' actions.
+
+            It is now morning -- time to help the werewolves win!"""
         )
 
 def see_all_werewolves(game_context: GameContext, minion_player_id: int) -> NightActionResult:

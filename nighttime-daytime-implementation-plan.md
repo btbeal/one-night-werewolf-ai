@@ -209,4 +209,9 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
   - House rule: lone werewolf gets second center card if first is werewolf
   - Night knowledge integrated into system prompt
   - Proper action completion tracking
-- ⏳ Ready for Phase 2.2: Implement other roles using same pattern
+- ✅ **Completed Minion Night Action (Phase 2.2)**:
+  - Automatic identification of all werewolves
+  - Handles no-werewolf scenario appropriately
+  - Night knowledge integrated into system prompt
+  - Follows same pattern as werewolf implementation
+- ⏳ Ready for Phase 2.3: Continue with other roles (Mason, Seer, etc.)
