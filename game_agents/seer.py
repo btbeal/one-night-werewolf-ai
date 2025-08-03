@@ -41,7 +41,7 @@ SEER_INVESTIGATE_TOOL = {
 class SeerAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
         super().__init__(player_id, player_name, initial_role, is_ai, tools=[SEER_INVESTIGATE_TOOL])
-        self.nighttime_tool = "seer_investigate"
+        self.nighttime_tool = SEER_INVESTIGATE_TOOL.get("function", {}).get("name")
 
     def execute_night_action(self, game_context: GameContext):
         """Seer has no automatic night action - they must use the seer_investigate tool"""

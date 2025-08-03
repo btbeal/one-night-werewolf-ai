@@ -145,11 +145,9 @@ class BaseAgent:
             )
         
     def _invoke_model(self, conversation_history: ConversationHistory, prompt: str, prompt_is_another_player_question: bool = False, questioning_player_name: str = "", game_context: GameContext = None) -> ONWAgentResponse:
-        # Pass game_context to system prompt (for phase-aware prompts)
         try:
             system_prompt = self._get_system_prompt(game_context)
         except TypeError:
-            # Fallback for agents that don't accept game_context parameter
             system_prompt = self._get_system_prompt()
         user_prompt = self._get_prompt(conversation_history, prompt, prompt_is_another_player_question, questioning_player_name)
         
@@ -158,7 +156,6 @@ class BaseAgent:
             {"role": "user", "content": user_prompt}
         ]
         
-        # Determine if we should force tool choice (nighttime seer)
         api_params = {
             "model": self.model,
             "messages": messages,
@@ -166,7 +163,6 @@ class BaseAgent:
             "response_format": ONWAgentResponse
         }
         
-        # Force tool usage for agents that require it during nighttime
         if game_context.is_nighttime:
             forced_tool = self.get_forced_nighttime_tool()
             if forced_tool:
