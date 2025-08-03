@@ -235,4 +235,11 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
              - Personal knowledge integration
              - **Clean Separate Prompts**: Distinct `_get_nighttime_prompt()` and `_get_daytime_prompt()` methods
              - **Code Quality**: Refactored player list logic into `GameContext.get_other_player_names_in_text()`
-           - ⏳ Ready for Phase 2.6: Continue with remaining roles (Troublemaker, Drunk, Insomniac)
+           - ✅ **Completed Insomniac Automatic Role Check (Phase 2.6)**:
+             - Automatic night action (no tools needed)
+             - Checks final role after all other night actions complete
+             - Detects if role changed during the night
+             - Personal knowledge integration
+             - **Simplified Design**: Single system prompt (no nighttime prompt needed)
+             - Follows same pattern as Mason and Werewolf
+           - ⏳ Ready for Phase 2.7: Continue with remaining roles (Troublemaker, Drunk)
