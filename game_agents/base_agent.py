@@ -263,8 +263,17 @@ class BaseAgent:
                 game_context=game_context,
                 seer_player_id=self.player_id,
                 investigation_type=args.get('investigation_type'),
-                target_player_id=args.get('target_player_id'),
+                target_player_name=args.get('target_player_name'),
                 card_positions=args.get('card_positions')
+            )
+        elif name == "robber_swap":
+            if not game_context:
+                return "Error: Game context required for this tool"
+            from game_agents.robber import robber_swap
+            return robber_swap(
+                game_context=game_context,
+                robber_player_id=self.player_id,
+                target_player_name=args.get('target_player_name')
             )
         else:
             return f"Unknown tool: {name}"

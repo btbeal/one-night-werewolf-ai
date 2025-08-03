@@ -2,30 +2,82 @@ from game_context.game_context import GameContext
 from game_context.roles import Role
 from game_agents.agent_registry import register_agent
 from game_agents.base_agent import BaseAgent
-from game_agents.common_tools import NightActionResult, validate_player_exists
+from game_agents.common_tools import NightActionResult, validate_player_exists, resolve_player_name_to_id
 import textwrap
+
+# Robber tool definition
+ROBBER_SWAP_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "robber_swap",
+        "description": "As the Robber, swap your card with another player and learn your new role (nighttime only)",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "target_player_name": {
+                    "type": "string",
+                    "description": "Name of the player to swap cards with"
+                }
+            },
+            "required": ["target_player_name"]
+        }
+    }
+}
 
 @register_agent(Role.ROBBER)
 class RobberAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
-        super().__init__(player_id, player_name, initial_role, is_ai)
+        super().__init__(player_id, player_name, initial_role, is_ai, tools=[ROBBER_SWAP_TOOL])
+        self.nighttime_tool = ROBBER_SWAP_TOOL.get("function", {}).get("name")
 
-    def _get_system_prompt(self):
+    def execute_night_action(self, game_context: GameContext):
+        """Robber has no automatic night action - they must use the robber_swap tool"""
+        return "As the Robber, you must choose which player to swap cards with using the robber_swap tool."
+
+    def _get_system_prompt(self, game_context: GameContext = None):
+        if game_context and game_context.is_nighttime:
+            return self._get_nighttime_prompt(game_context)
+        else:
+            return self._get_daytime_prompt(game_context)
+    
+    def _get_nighttime_prompt(self, game_context: GameContext):
+        player_list = game_context.get_other_player_names_in_text(self.player_id)
+        
         return textwrap.dedent(
-            f"""
-            You are playing a game of One Night Werewolf and have been assigned the role of the Robber! Your name is {self.player_name}.
+            f"""You are playing One Night Werewolf as the Robber! Your name is {self.player_name}.
 
-            During the night, you swapped your card with another player and looked at your new role. You now know what role you have become and what role the other player now has.
+            Other players in the game are:
+            {player_list}
+
+            It is now nighttime and you must use the "robber_swap" tool to swap your card with another player and learn your new role.
+            
+            Usage: robber_swap with {{"target_player_name": "<player_name>"}}
+
+            Choose wisely!"""
+        )
+    
+    def _get_daytime_prompt(self, game_context: GameContext = None):
+        night_knowledge = ""
+        if self.personal_knowledge:
+            night_knowledge = f"\n\nWhat you learned during the night phase:\n" + "\n".join(f"- {knowledge}" for knowledge in self.personal_knowledge)
+        
+        player_list = game_context.get_other_player_names_in_text(self.player_id)
+        
+        return textwrap.dedent(
+            f"""You are playing One Night Werewolf as the Robber! Your name is {self.player_name}.
+
+            Other players in the game are:
+            {player_list}
+
+            At night, you used your special abilities to swap your card with another player and learn your new role:
+            {night_knowledge}
 
             Your strategy depends on your new role:
             - If you're now a villager role: Help find the werewolves
-            - If you're now a werewolf: Try to blend in and avoid detection
+            - If you're now a werewolf: Try to blend in and avoid detection (while also protecting those werewolfs from discovery)
             - Share information about the swap strategically
 
-            Remember: The player you swapped with now has your original Robber card, but they don't know about the swap.
-
-            It is now morning -- use your knowledge wisely!
-            """
+            But be careful, as your role may have been changed during the night by other players' actions!"""
         )
 
 def rob_player_card(game_context: GameContext, robber_player_id: int, target_player_id: int) -> NightActionResult:
@@ -71,3 +123,41 @@ def rob_player_card(game_context: GameContext, robber_player_id: int, target_pla
             "robber_original_role": robber_original_role.value
         }
     )
+
+
+def robber_swap(game_context: GameContext, robber_player_id: int, target_player_name: str) -> str:
+    """
+    Robber swap tool - allows the robber to swap cards with another player
+    
+    Args:
+        game_context: Current game state
+        robber_player_id: ID of the robber making the swap
+        target_player_name: Name of the player to swap cards with
+    
+    Returns:
+        String result of the swap
+    """
+    # Resolve player name to ID
+    success, resolution_message, target_player_id = resolve_player_name_to_id(
+        game_context, target_player_name, robber_player_id
+    )
+    
+    if not success:
+        return resolution_message
+    
+    # Perform the swap
+    result = rob_player_card(game_context, robber_player_id, target_player_id)
+    
+    # Add duplicate name warning if needed
+    final_message = result.message
+    if resolution_message:  # There was a duplicate name warning
+        final_message = resolution_message + " " + result.message
+    
+    # Add successful results to the robber's personal knowledge
+    if result.success:
+        # Find the robber agent and add to their knowledge
+        robber_player = game_context.get_player(robber_player_id)
+        if hasattr(robber_player, 'personal_knowledge'):
+            robber_player.personal_knowledge.append(final_message)
+    
+    return final_message

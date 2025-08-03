@@ -136,3 +136,17 @@ class GameContext(BaseModel):
                     if player.current_role.lower() == role:
                         return role
         return None  # All night actions completed
+
+    def get_other_player_names(self, excluding_player_id: int) -> List[str]:
+        """Get list of other players' names, excluding the specified player"""
+        return [
+            player.player_name for player_id, player in self.players.items() 
+            if player_id != excluding_player_id
+        ]
+
+    def get_other_player_names_in_text(self, excluding_player_id: int) -> str:
+        """Get list of other players' names, excluding the specified player, in text format"""
+        other_players = self.get_other_player_names(excluding_player_id)
+        if other_players:
+            return f"The names of the other players in the game are: {', '.join(other_players)}"
+        return ""

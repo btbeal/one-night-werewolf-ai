@@ -61,3 +61,33 @@ def validate_center_position(position: int) -> tuple[bool, str]:
     if not 0 <= position <= 2:
         return False, "Center position must be 0, 1, or 2!"
     return True, ""
+
+
+def resolve_player_name_to_id(game_context: GameContext, target_name: str, requesting_player_id: int) -> tuple[bool, str, int]:
+    """
+    Resolve a player name to player ID, handling duplicates
+    
+    Args:
+        game_context: Current game state
+        target_name: Name of the player to find
+        requesting_player_id: ID of the player making the request (excluded from search)
+    
+    Returns:
+        (success, message, player_id)
+    """
+    # Find all players with matching name (excluding the requesting player)
+    matching_players = []
+    for player_id, player in game_context.players.items():
+        if player_id != requesting_player_id and player.player_name.lower() == target_name.lower():
+            matching_players.append((player_id, player))
+    
+    if not matching_players:
+        return False, f"No player found with name '{target_name}'", -1
+    
+    if len(matching_players) == 1:
+        return True, "", matching_players[0][0]
+    
+    # Multiple players with same name - for now, use first match
+    # In a real game, you'd ask for clarification
+    player_names = [f"{player.player_name} (ID: {pid})" for pid, player in matching_players]
+    return True, f"Multiple players named '{target_name}' found: {', '.join(player_names)}. Using first match.", matching_players[0][0]

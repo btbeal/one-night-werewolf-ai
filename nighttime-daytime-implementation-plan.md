@@ -228,4 +228,11 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
   - **Clean Abstraction**: `get_forced_nighttime_tool()` method returns `self.nighttime_tool` (singular)
   - **Phase-Aware System Prompts**: Different instructions for night vs day
   - **Forced Tool Choice**: `tool_choice` parameter during nighttime for agents that need it
-- ⏳ Ready for Phase 2.5: Continue with other roles (Robber, Insomniac, etc.)
+           - ✅ **Completed Robber Swap Tool (Phase 2.5)**:
+             - Interactive nighttime tool for strategic card swapping
+             - Player name-based interface (realistic agent interaction)
+             - Duplicate name handling via `resolve_player_name_to_id`
+             - Personal knowledge integration
+             - **Clean Separate Prompts**: Distinct `_get_nighttime_prompt()` and `_get_daytime_prompt()` methods
+             - **Code Quality**: Refactored player list logic into `GameContext.get_other_player_names_in_text()`
+           - ⏳ Ready for Phase 2.6: Continue with remaining roles (Troublemaker, Drunk, Insomniac)
