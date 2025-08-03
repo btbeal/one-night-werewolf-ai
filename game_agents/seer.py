@@ -57,7 +57,7 @@ class SeerAgent(BaseAgent):
         player_list = game_context.get_other_player_names_in_text(self.player_id)
         
         return textwrap.dedent(
-            f"""You are playing One Night Werewolf as the Seer! Your name is {self.player_name}.
+            f"""You are playing One Night Werewolf with the initial role of {self.initial_role}! Your name is {self.player_name}.
 
             Other players at the table are:
             {player_list}
@@ -84,7 +84,7 @@ class SeerAgent(BaseAgent):
             player_list = game_context.get_other_player_names_in_text(self.player_id)
         
         return textwrap.dedent(
-            f"""You are playing One Night Werewolf as the Seer! Your name is {self.player_name}.
+            f"""You are playing One Night Werewolf with the initial role of {self.initial_role}! Your name is {self.player_name}.
 
             Other players in the game are:
             {player_list}
