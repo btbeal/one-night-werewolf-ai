@@ -14,8 +14,6 @@ class MinionAgent(BaseAgent):
     def execute_night_action(self, game_context: GameContext):
         """Execute the automatic minion night action and update personal knowledge"""
         minion_result = see_all_werewolves(game_context, self.player_id)
-        
-        # Add info to personal knowledge (will appear in system prompt)
         self.personal_knowledge.append(minion_result.message)
         
         return minion_result.message

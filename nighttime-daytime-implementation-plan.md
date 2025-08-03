@@ -214,4 +214,9 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
   - Handles no-werewolf scenario appropriately
   - Night knowledge integrated into system prompt
   - Follows same pattern as werewolf implementation
-- ⏳ Ready for Phase 2.3: Continue with other roles (Mason, Seer, etc.)
+- ✅ **Completed Mason Night Action (Phase 2.3)**:
+  - Automatic identification of other masons
+  - Handles single mason scenario appropriately
+  - Night knowledge integrated into system prompt  
+  - Clean, concise messaging consistent with other roles
+- ⏳ Ready for Phase 2.4: Continue with other roles (Seer, Robber, etc.)

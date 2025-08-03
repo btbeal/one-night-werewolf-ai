@@ -11,12 +11,23 @@ class MasonAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
         super().__init__(player_id, player_name, initial_role, is_ai)
 
-    def _get_system_prompt(self):
-        return textwrap.dedent(
-            f"""
-            You are playing a game of One Night Werewolf and have been assigned the role of a Mason! Your name is {self.player_name}.
+    def execute_night_action(self, game_context: GameContext):
+        """Execute the automatic mason night action and update personal knowledge"""
+        mason_result = see_mason_allies(game_context, self.player_id)
+        self.personal_knowledge.append(mason_result.message)
+        return mason_result.message
 
-            During the night, you looked for other Masons. Masons are on the villager team and know each other.
+    def _get_system_prompt(self):
+        night_knowledge = ""
+        if self.personal_knowledge:
+            night_knowledge = f"\n\nWhat you learned during the night phase:\n" + "\n".join(f"- {knowledge}" for knowledge in self.personal_knowledge)
+        
+        return textwrap.dedent(
+            f"""You are playing a game of One Night Werewolf and have been assigned the role of a Mason! Your name is {self.player_name}.
+
+            You are on the villager team and want to eliminate werewolves. Masons know each other and can work together.
+
+            {night_knowledge}
 
             Your strategy should be to:
             1. Coordinate with other Masons if they exist
@@ -24,12 +35,9 @@ class MasonAgent(BaseAgent):
             3. Help identify werewolves as a trusted group
             4. If you're the only Mason, use that information strategically
 
-            You are on the villager team and want to eliminate werewolves.
-
             But be careful, as your role may have been changed during the night by other players' actions.
 
-            It is now morning -- time to work with your Mason allies!
-            """
+            It is now morning -- time to work with your Mason allies!"""
         )
     
 def see_mason_allies(game_context: GameContext, mason_player_id: int) -> NightActionResult:
@@ -50,7 +58,7 @@ def see_mason_allies(game_context: GameContext, mason_player_id: int) -> NightAc
     if not other_masons:
         return NightActionResult(
             True,
-            "You looked for other masons but found none. You are the only mason!",
+            "You looked for other masons but found none. You are the only mason! The masons are always played in pairs. So, the other mason must have started as a center card.",
             {"other_masons": [], "is_only_mason": True}
         )
     
