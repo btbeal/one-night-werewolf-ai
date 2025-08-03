@@ -40,21 +40,17 @@ class RobberAgent(BaseAgent):
             return f"The tool '{name}' is not available during the current game phase."
         
         if name == "robber_swap":
-            if not game_context:
-                return "Error: Game context required for this tool"
             result = robber_swap(
                 game_context=game_context,
                 robber_player_id=self.player_id,
                 target_player_name=args.get('target_player_name')
             )
             
-            # Auto-append successful results to personal knowledge
             if result and isinstance(result, str) and not result.startswith("Error:"):
                 self.personal_knowledge.append(result)
             
             return result
         else:
-            # Delegate to common tools
             return self._call_common_tool(name, args, game_context)
 
     def _get_system_prompt(self, game_context: GameContext = None):

@@ -44,22 +44,18 @@ class TroublemakerAgent(BaseAgent):
             return f"The tool '{name}' is not available during the current game phase."
         
         if name == "troublemaker_swap":
-            if not game_context:
-                return "Error: Game context required for this tool"
             result = troublemaker_swap(
                 game_context=game_context,
                 troublemaker_player_id=self.player_id,
                 player1_name=args.get('player1_name'),
                 player2_name=args.get('player2_name')
             )
-            
-            # Auto-append successful results to personal knowledge
+
             if result and isinstance(result, str) and not result.startswith("Error:"):
                 self.personal_knowledge.append(result)
             
             return result
         else:
-            # Delegate to common tools
             return self._call_common_tool(name, args, game_context)
 
     def _get_system_prompt(self, game_context: GameContext = None):
