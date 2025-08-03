@@ -3,6 +3,18 @@ from typing import List, Dict, Optional, Any, TYPE_CHECKING
 from .messages import ConversationHistory
 from .roles import Role
 
+# Define the order in which roles act during the night phase
+NIGHT_PHASE_ORDER = [
+    "werewolf",      # Werewolves see each other
+    "minion",        # Minion sees werewolves  
+    "mason",         # Masons see each other
+    "seer",          # Seer looks at player or center cards
+    "robber",        # Robber swaps with player
+    "troublemaker",  # Troublemaker swaps two other players
+    "drunk",         # Drunk swaps with center card
+    "insomniac"      # Insomniac checks their final role
+]
+
 if TYPE_CHECKING:
     from game_agents.base_agent import BaseAgent
 
@@ -12,6 +24,11 @@ class GameContext(BaseModel):
     players: Dict[int, Any] = Field(default_factory=dict)
     conversation: ConversationHistory = Field(default_factory=ConversationHistory)
     center_cards: List[Role] = Field(default_factory=list)
+    
+    # Phase tracking
+    is_nighttime: bool = True  # Game starts in nighttime phase
+    night_phase_order: List[str] = Field(default_factory=lambda: NIGHT_PHASE_ORDER.copy())
+    night_actions_completed: Dict[str, bool] = Field(default_factory=dict)
     
     class Config:
         arbitrary_types_allowed = True
@@ -86,3 +103,29 @@ class GameContext(BaseModel):
             "player_roles": player_roles,
             "center_cards": center_cards
         }
+    
+    # Phase management methods
+    def set_nighttime(self, is_night: bool) -> None:
+        """Set the current game phase"""
+        self.is_nighttime = is_night
+        if is_night:
+            # Reset night actions when entering night phase
+            self.night_actions_completed.clear()
+    
+    def mark_night_action_completed(self, role: str) -> None:
+        """Mark a role's nighttime action as completed"""
+        self.night_actions_completed[role] = True
+    
+    def is_night_action_completed(self, role: str) -> bool:
+        """Check if a role's nighttime action has been completed"""
+        return self.night_actions_completed.get(role, False)
+    
+    def get_next_night_role(self) -> Optional[str]:
+        """Get the next role that should act during the night phase"""
+        for role in self.night_phase_order:
+            if not self.is_night_action_completed(role):
+                # Check if any player has this role
+                for player in self.players.values():
+                    if player.current_role.lower() == role:
+                        return role
+        return None  # All night actions completed
