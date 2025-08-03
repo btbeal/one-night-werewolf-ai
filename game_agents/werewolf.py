@@ -4,6 +4,7 @@ from game_context.roles import Role
 from game_agents.common_tools import NightActionResult
 from game_agents.base_agent import BaseAgent
 from .agent_registry import register_agent
+import random
 
 
 def see_werewolf_allies(game_context: GameContext, werewolf_player_id: int) -> NightActionResult:
@@ -52,17 +53,52 @@ class WerewolfAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
         super().__init__(player_id, player_name, initial_role, is_ai)
     
+    def execute_night_action(self, game_context: GameContext):
+        """Execute the automatic werewolf night action and update personal knowledge"""
+        werewolf_result = see_werewolf_allies(game_context, self.player_id)
+        
+        if werewolf_result.data.get("is_lone_werewolf"):
+            
+            eligible_center_cards = [card for card in game_context.center_cards if card.value.lower() != "werewolf"]
+            
+            if not eligible_center_cards:
+                raise ValueError("Game setup bug: Lone werewolf found but all center cards are werewolves")
+            
+            chosen_card = random.choice(eligible_center_cards)
+            center_position = game_context.center_cards.index(chosen_card)
+            center_info = f"As the lone werewolf, you automatically looked at center position {center_position} and saw the {chosen_card.value} card."
+            
+            result = NightActionResult(
+                True,
+                werewolf_result.message + " " + center_info,
+                {
+                    **werewolf_result.data,
+                    "center_card_seen": chosen_card.value,
+                    "center_position": center_position
+                }
+            )
+        else:
+            result = werewolf_result
+        
+        self.personal_knowledge.append(result.message)
+        game_context.mark_night_action_completed("werewolf")
+        
+        return result
+    
     def _get_system_prompt(self):
+        night_knowledge = ""
+        if self.personal_knowledge:
+            night_knowledge = f"\n\nWhat you learned during the night phase:\n" + "\n".join(f"- {knowledge}" for knowledge in self.personal_knowledge)
+        
         return textwrap.dedent(
             f"""You are playing a game of One Night Werewolf!
 
                 You are playing as {self.player_name} and your initial role is Werewolf.
 
+                {night_knowledge}
+
                 Your role is to deceive the villagers and avoid being voted out. 
                 You are on the werewolf team and win if no werewolves are eliminated during the day phase.
-
-                During the night, you saw who the other werewolves are (if any). Work together with them to mislead the villagers, 
-                but be subtle about it.
 
                 Your strategy should be to:
                 1. Blend in with the villagers

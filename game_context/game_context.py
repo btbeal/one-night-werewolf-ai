@@ -104,6 +104,13 @@ class GameContext(BaseModel):
             "center_cards": center_cards
         }
     
+    def get_players_with_role(self, role: Role) -> List[int]:
+        """Get list of player IDs who have the specified role"""
+        return [
+            player_id for player_id, player in self.players.items()
+            if player.current_role.lower() == role.value.lower()
+        ]
+    
     # Phase management methods
     def set_nighttime(self, is_night: bool) -> None:
         """Set the current game phase"""

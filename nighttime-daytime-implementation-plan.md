@@ -204,4 +204,9 @@ def look_at_player_card(self, player_name: str, game_context: GameContext):
   - Added night action tracking methods: `mark_night_action_completed()`, `is_night_action_completed()`, `get_next_night_role()`
 - ✅ **Completed Phase 1.2**: Night phase order already implemented in 1.1
 - 🎯 **Phase 1 Complete!** Game context now has full phase tracking capability
-- ⏳ Ready for Phase 2: Nighttime Tool System
+- ✅ **Completed Werewolf Proof of Concept (Phase 2.1)**: 
+  - Automatic night actions (no tools needed)
+  - House rule: lone werewolf gets second center card if first is werewolf
+  - Night knowledge integrated into system prompt
+  - Proper action completion tracking
+- ⏳ Ready for Phase 2.2: Implement other roles using same pattern

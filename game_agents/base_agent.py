@@ -78,6 +78,7 @@ class BaseAgent:
         self.is_ai = is_ai
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.tools = common_tools + tools
+        self.nighttime_tools = []  # List of nighttime-only tool names
     
     def act(
             self,
@@ -215,7 +216,22 @@ class BaseAgent:
             return f"Error parsing response: {str(e)}", raw_response.strip()
 
 
+    def is_tool_available(self, tool_name: str, game_context: GameContext = None) -> bool:
+        """Check if a tool is available based on current game phase"""
+        if tool_name in self.nighttime_tools:
+            return game_context and game_context.is_nighttime
+        return True  # Daytime tools always available
+    
+    def execute_night_action(self, game_context: GameContext):
+        """Execute this agent's automatic nighttime action. Override in subclasses."""
+        # Default implementation - no night action
+        return None
+    
     def call_tool(self, name: str, args: dict, game_context: GameContext = None):
+        # Check if tool is available in current phase
+        if not self.is_tool_available(name, game_context):
+            return f"The tool '{name}' is not available during the current game phase."
+        
         if name == "inquire_about_another_player":
             if not game_context:
                 return "Error: Game context required for this tool"
@@ -225,6 +241,7 @@ class BaseAgent:
                 game_context=game_context,
                 questioning_player_name=self.player_name
             )
+
         else:
             return f"Unknown tool: {name}"
     
