@@ -108,10 +108,8 @@ class BaseAgent:
                 f"""{questioning_player_name} has a question for you!
 
                 The question is: {prompt}
-             
-                Keep in mind that you have the following personal knowledge that you may want to keep to yourself or disclose:
-                {self.personal_knowledge}
 
+                The conversation history as of current has been:
                 {conversation_history_text}    
 
                 Please respond to {questioning_player_name}'s question. You can choose to be truthful, 
@@ -121,17 +119,15 @@ class BaseAgent:
                 
                 PRIVATE_THOUGHTS: [Your internal reasoning and strategy - what you're actually thinking]
                 
-                PUBLIC_RESPONSE: [What you want to say out loud to {questioning_player_name} and the group]"""
+                PUBLIC_RESPONSE: [What you want to say out loud to {questioning_player_name} and the group in response to their question]"""
             )
         else:
             return textwrap.dedent(
                 f"""It's your turn to act!
-            
-                Keep in mind that you have the following personal knowledge that you may want to keep to yourself or disclose:
-                {self.personal_knowledge}
 
                 Current situation: {prompt}
 
+                The conversation history as of current has been:
                 {conversation_history_text}
 
                 What would you like to say to the group or do? You can share information, ask questions, make accusations, 
