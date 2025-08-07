@@ -69,7 +69,7 @@ common_tools = [
 ]
 
 class BaseAgent:
-    def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool, model: str = "gpt-4o-mini", tools: list[dict] = []):
+    def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool, model: str = "gpt-4o-mini", nighttime_tools: list[dict] = []):
         self.model = model
         self.player_id = player_id
         self.player_name = player_name
@@ -78,8 +78,9 @@ class BaseAgent:
         self.personal_knowledge = []
         self.is_ai = is_ai
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.tools = common_tools + tools
-        self.nighttime_tool = None  # Single nighttime-only tool name
+        self.nighttime_tools = nighttime_tools
+        self.daytime_tools = common_tools
+        self.nighttime_tool = nighttime_tools[0].get("function", {}).get("name") if nighttime_tools else None
     
     def act(
             self,
@@ -152,19 +153,33 @@ class BaseAgent:
             {"role": "user", "content": user_prompt}
         ]
         
+        # Determine which tools are available based on game phase
+        if game_context.is_nighttime:
+            available_tools = self.nighttime_tools
+        else:
+            available_tools = self.daytime_tools
+        
         api_params = {
             "model": self.model,
             "messages": messages,
-            "tools": self.tools if self.tools else None,
-            "response_format": ONWAgentResponse
+            "tools": available_tools if available_tools else None
         }
+        
+        # Only use structured output during daytime when we need the response format
+        if not game_context.is_nighttime:
+            api_params["response_format"] = ONWAgentResponse
         
         if game_context.is_nighttime:
             forced_tool = self.get_forced_nighttime_tool()
             if forced_tool:
                 api_params["tool_choice"] = {"type": "function", "function": {"name": forced_tool}}
         
-        response = self.client.chat.completions.parse(**api_params)
+        if game_context.is_nighttime:
+            # For nighttime, use regular completion (no structured output)
+            response = self.client.chat.completions.create(**api_params)
+        else:
+            # For daytime, use structured output
+            response = self.client.chat.completions.parse(**api_params)
 
         raw_response = response.choices[0].message.content
         tool_calls_made = []
@@ -175,11 +190,10 @@ class BaseAgent:
                 args = json.loads(tool_call.function.arguments)
                 
                 result = self.call_tool(name, args, game_context)
-                tool_calls_made.append({
-                    "name": name,
-                    "args": args,
-                    "result": result
-                })
+                tool_calls_made.append(ToolCall(
+                    name=name,
+                    arguments=ToolCallArguments(args=args, result=result)
+                ))
                 
                 messages.append({
                     "role": "tool",
@@ -187,8 +201,13 @@ class BaseAgent:
                     "content": str(result)
                 })
         
-
-        private_thoughts, public_response = self._parse_structured_response(raw_response)
+        if game_context.is_nighttime:
+            # For nighttime, create simple response
+            private_thoughts = "Nighttime action completed"
+            public_response = raw_response or "Action completed"
+        else:
+            # For daytime, parse structured response
+            private_thoughts, public_response = self._parse_structured_response(raw_response)
         
         agent_response = ONWAgentResponse(  
             public_response=public_response,
@@ -197,12 +216,21 @@ class BaseAgent:
             raw_response=raw_response
         )
 
+        # Convert ToolCall objects back to dict format for conversation history
+        tool_calls_for_history = []
+        for tool_call in tool_calls_made:
+            tool_calls_for_history.append({
+                "name": tool_call.name,
+                "args": tool_call.arguments.args,
+                "result": tool_call.arguments.result
+            })
+        
         conversation_history.add_agent_response(
             player_id=self.player_id,
             player_name=self.player_name,
             public_response=public_response,
             private_thoughts=private_thoughts,
-            tool_calls=tool_calls_made,
+            tool_calls=tool_calls_for_history,
             raw_response=raw_response
         )
         

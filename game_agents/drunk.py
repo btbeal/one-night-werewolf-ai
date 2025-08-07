@@ -21,15 +21,17 @@ DRUNK_SWAP_TOOL = {
                     "description": "Center card position to swap with (0, 1, or 2)"
                 }
             },
-            "required": ["center_position"]
-        }
+            "required": ["center_position"],
+            "additionalProperties": False
+        },
+        "strict": True
     }
 }
 
 @register_agent(Role.DRUNK)
 class DrunkAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
-        super().__init__(player_id, player_name, initial_role, is_ai, tools=[DRUNK_SWAP_TOOL])
+        super().__init__(player_id, player_name, initial_role, is_ai, nighttime_tools=[DRUNK_SWAP_TOOL])
         self.nighttime_tool = DRUNK_SWAP_TOOL.get("function", {}).get("name")
 
     def execute_night_action(self, game_context: GameContext):

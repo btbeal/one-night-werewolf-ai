@@ -23,15 +23,17 @@ TROUBLEMAKER_SWAP_TOOL = {
                     "description": "Name of the second player to swap cards with"
                 }
             },
-            "required": ["player1_name", "player2_name"]
-        }
+            "required": ["player1_name", "player2_name"],
+            "additionalProperties": False
+        },
+        "strict": True
     }
 }
 
 @register_agent(Role.TROUBLEMAKER)
 class TroublemakerAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
-        super().__init__(player_id, player_name, initial_role, is_ai, tools=[TROUBLEMAKER_SWAP_TOOL])
+        super().__init__(player_id, player_name, initial_role, is_ai, nighttime_tools=[TROUBLEMAKER_SWAP_TOOL])
         self.nighttime_tool = TROUBLEMAKER_SWAP_TOOL.get("function", {}).get("name")
 
     def execute_night_action(self, game_context: GameContext):

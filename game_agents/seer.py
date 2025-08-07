@@ -22,25 +22,27 @@ SEER_INVESTIGATE_TOOL = {
                 },
                 "target_player_name": {
                     "type": "string",
-                    "description": "Name of the player to investigate (required when investigation_type='player')"
+                    "description": "Name of the player to investigate (required when investigation_type='player', use empty string otherwise)"
                 },
                 "card_positions": {
                     "type": "array",
                     "items": {"type": "integer", "minimum": 0, "maximum": 2},
-                    "minItems": 2,
+                    "minItems": 0,
                     "maxItems": 2,
-                    "description": "Exactly 2 center card positions to investigate (required when investigation_type='center')"
+                    "description": "Exactly 2 center card positions to investigate (required when investigation_type='center', use empty array otherwise)"
                 }
             },
-            "required": ["investigation_type"]
-        }
+            "required": ["investigation_type", "target_player_name", "card_positions"],
+            "additionalProperties": False
+        },
+        "strict": True
     }
 }
 
 @register_agent(Role.SEER)
 class SeerAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
-        super().__init__(player_id, player_name, initial_role, is_ai, tools=[SEER_INVESTIGATE_TOOL])
+        super().__init__(player_id, player_name, initial_role, is_ai, nighttime_tools=[SEER_INVESTIGATE_TOOL])
         self.nighttime_tool = SEER_INVESTIGATE_TOOL.get("function", {}).get("name")
 
     def execute_night_action(self, game_context: GameContext):
@@ -200,7 +202,7 @@ def seer_investigate(game_context: GameContext, seer_player_id: int, investigati
         String result of the investigation
     """
     if investigation_type == 'player':
-        if target_player_name is None:
+        if not target_player_name or target_player_name.strip() == "":
             return "Error: target_player_name required for player investigation"
         
         # Resolve player name to ID
@@ -219,8 +221,8 @@ def seer_investigate(game_context: GameContext, seer_player_id: int, investigati
             final_message = resolution_message + " " + result.message
         
     elif investigation_type == 'center':
-        if not card_positions:
-            return "Error: card_positions required for center card investigation"
+        if not card_positions or len(card_positions) != 2:
+            return "Error: exactly 2 card_positions required for center card investigation"
         
         result = see_center_cards(game_context, seer_player_id, card_positions)
         final_message = result.message

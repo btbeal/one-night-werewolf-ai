@@ -19,15 +19,17 @@ ROBBER_SWAP_TOOL = {
                     "description": "Name of the player to swap cards with"
                 }
             },
-            "required": ["target_player_name"]
-        }
+            "required": ["target_player_name"],
+            "additionalProperties": False
+        },
+        "strict": True
     }
 }
 
 @register_agent(Role.ROBBER)
 class RobberAgent(BaseAgent):
     def __init__(self, player_id: int, player_name: str, initial_role: str, is_ai: bool):
-        super().__init__(player_id, player_name, initial_role, is_ai, tools=[ROBBER_SWAP_TOOL])
+        super().__init__(player_id, player_name, initial_role, is_ai, nighttime_tools=[ROBBER_SWAP_TOOL])
         self.nighttime_tool = ROBBER_SWAP_TOOL.get("function", {}).get("name")
 
     def execute_night_action(self, game_context: GameContext):
